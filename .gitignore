@@ -1,0 +1,8 @@
+__pycache__/
+
+# 上線用（Wrangler）：金鑰檔與暫存，絕不提交
+.env
+.env.*
+.dev.vars
+.wrangler/
+node_modules/

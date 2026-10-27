@@ -1,0 +1,3 @@
+# 上線時只上傳 index.html，其餘全部排除
+*
+!index.html

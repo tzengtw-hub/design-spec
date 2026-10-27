@@ -1,0 +1,8 @@
+// 上線設定（選用，課堂不用）。照 docs/deploy.md 的小抄做完，跟 Claude 說「上線」。
+{
+  // 網站名稱：只能用小寫英文、數字、減號。網址會是 https://<名稱>.<你的子網域>.workers.dev
+  "name": "my-site",
+  "compatibility_date": "2026-10-01",
+  // 只上傳 index.html：其他檔案在 .assetsignore 排除
+  "assets": { "directory": "." }
+}
