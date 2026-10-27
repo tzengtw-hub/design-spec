@@ -13,7 +13,7 @@
 | 3 | 複製帳號編號（Account ID）：在 **Workers & Pages** 頁面右側，或主控台首頁帳號名稱旁的選單 **Copy account ID** | 一串 32 個英數字，先貼在記事本 |
 | 4 | 建金鑰：右上角頭像 → **My Profile → API Tokens → Create Token**，範本選 **Edit Cloudflare Workers** → **Use template**；Account Resources 選你的帳號 → **Continue to summary → Create Token**，按複製 | 一串金鑰（只會顯示這一次），先貼在記事本 |
 | 5 | 到 `claude.ai/code`，在輸入框下方的環境選單選 **Add environment**（已經有自己的環境就按旁邊的齒輪編輯）：名稱填 `上線用`；**Network access** 選 **Custom**，Allowed domains 填 `api.cloudflare.com`，勾 **Also include default list of common package managers**；**Environment variables** 填下面兩行（換成你的值），按 **Add environment** | 環境選單裡多了「上線用」 |
-| 6 | 選這個 repo、環境選「上線用」，開一個新對話，說「**上線**」 | Claude 回你一個 `https://….workers.dev` 網址 |
+| 6 | 先照 `docs/dev.md` 建好 D1、設定 Access 和自訂網域；再選這個 repo、環境選「上線用」，開一個新對話，說「**上線**」 | 用你的自訂網域打開網站，會先出現 Cloudflare 登入頁（本專案已關閉 workers.dev 網址，避免繞過登入） |
 | 7 | 打開那個網址（第一次可能要等一兩分鐘） | 你的網站，手機也打得開 |
 
 第 5 步的環境變數（`=` 後面換成你記事本裡的值）：

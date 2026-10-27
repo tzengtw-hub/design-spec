@@ -1,8 +1,13 @@
 // 上線設定（選用，課堂不用）。本機開發與資料庫設定請看 docs/dev.md。
 {
-  // 網站名稱：只能用小寫英文、數字、減號。網址會是 https://<名稱>.<你的子網域>.workers.dev
-  "name": "my-site",
+  // Worker 名稱：只能用小寫英文、數字、減號。
+  "name": "yacht-order",
   "compatibility_date": "2026-10-01",
+
+  // 關掉 workers.dev 網址和預覽網址：這兩種網址可能不在 Cloudflare Access 保護之下。
+  // 正式網址請用自己的網域（Custom Domain），並在 Access 保護整個網域。
+  "workers_dev": false,
+  "preview_urls": false,
 
   // 後端程式（Cloudflare Worker）。純 JavaScript，不用打包工具。
   "main": "src/worker.js",
@@ -26,7 +31,17 @@
       "database_id": "REPLACE_WITH_D1_ID",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+
+  // 登入驗證用的設定（見 docs/dev.md 第 5 節）。
+  // 這兩個都「不是金鑰、不是密碼」：團隊網域和 AUD 標籤是公開的識別碼，可以提交。
+  // 下面是佔位字串，還沒換成真的值之前，正式模式的 API 一律回 403（不會放行）。
+  "vars": {
+    // Access 團隊網域，例如 "your-team.cloudflareaccess.com"（不要加 https://）
+    "ACCESS_TEAM_DOMAIN": "REPLACE_ME.cloudflareaccess.com",
+    // Access 應用程式的 Application Audience (AUD) Tag
+    "ACCESS_AUD": "REPLACE_WITH_ACCESS_AUD"
+  }
 
   // 注意：DEV_AUTH 不可以寫在這個檔案的 vars 裡。它只能放在本機的 .dev.vars（已在 .gitignore 排除）。
 }

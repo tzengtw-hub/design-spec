@@ -11,7 +11,7 @@
 | 後端程式 | `src/worker.js` | Cloudflare Worker（在 Cloudflare 上跑的小程式），負責查資料、檢查權限 |
 | 資料庫 | Cloudflare D1 | 雲端的表格式資料庫，名稱 `yacht-order` |
 | 資料表結構 | `migrations/0001_init.sql` | 遷移檔（migration）：建立資料表的指令，照順序套用 |
-| 假資料 | `migrations/seed_demo.sql` | 示範用的假帳號和假專案（@example.com） |
+| 假資料 | `seeds/seed_demo.sql` | 示範用的假帳號和假專案（@example.com）。放在 `migrations/` 外面，避免被當成遷移檔套用 |
 | 登入 | Cloudflare Access | Cloudflare 的登入關卡，先驗證身分才放行 |
 | 設定 | `wrangler.jsonc` | 告訴 Wrangler 後端在哪、前端在哪、資料庫是哪一個 |
 
@@ -42,14 +42,14 @@ npx wrangler d1 create yacht-order
 
 ```bash
 npx wrangler d1 execute yacht-order --local --file=migrations/0001_init.sql
-npx wrangler d1 execute yacht-order --local --file=migrations/seed_demo.sql
+npx wrangler d1 execute yacht-order --local --file=seeds/seed_demo.sql
 ```
 
 雲端（測試環境）：把上面的 `--local` 換成 `--remote`。
 
-> 注意：`wrangler d1 migrations apply` 會把 `migrations/` 資料夾裡**所有** `.sql` 檔都當成遷移檔套用，
-> 包括 `seed_demo.sql`（假資料）。所以目前請用上面的 `d1 execute --file` 一個一個套，
-> **不要對正式資料庫跑 `migrations apply`**，以免把假資料灌進正式環境。
+> 注意：假資料 `seeds/seed_demo.sql` 已經搬出 `migrations/` 資料夾，
+> 所以 `wrangler d1 migrations apply` 只會套用資料表結構，不會順便灌假資料。
+> **正式資料庫不要執行 `seeds/seed_demo.sql`**，假資料只給本機或測試環境用。
 
 ## 4. 在本機跑起來（用假帳號試）
 
@@ -88,15 +88,46 @@ curl -H "X-Dev-User: customer1@example.com" http://localhost:8787/api/projects/3
 ## 5. 設定 Cloudflare Access（正式登入）
 
 Cloudflare Access 會擋在網站前面：沒通過登入的人連網頁都進不來。
-通過後，Access 會在每個請求加上標頭 `Cf-Access-Authenticated-User-Email`，後端用它知道「你是誰」。
+通過後，Access 會在每個請求附上一張「登入憑證」（JWT，一段有數位簽章、偽造不了的文字），
+放在標頭 `Cf-Access-Jwt-Assertion` 和 cookie `CF_Authorization`。
+後端會先檢查這張憑證是真的、沒過期、是發給這個網站的，才從裡面拿 email 知道「你是誰」。
 
 1. 到 Cloudflare 後台 → **Zero Trust** → **Access** → **Applications** → **Add an application** → 選 **Self-hosted**。
-2. 網域填這個網站的網址（例如 `<名稱>.<你的子網域>.workers.dev`，或你自己的網域）。
+2. 網域填這個網站的網址（你自己的網域，例如 `yacht.你的網域.com`）。
+   `wrangler.jsonc` 已經關掉 `workers.dev` 網址和預覽網址（`workers_dev: false`、`preview_urls: false`），
+   所以要先在 Cloudflare 後台幫 Worker `yacht-order` 加一個自訂網域（Custom Domain）。
    **整個網站都要保護**，不要只保護部分路徑。
 3. 新增一條 **Policy（規則）**：Action 選 **Allow**，條件選 **Emails**，填上要放行的 email
    （或 Emails ending in 填船廠的網域）。
 4. 登入方式可以先用預設的 **One-time PIN**（寄一次性密碼到信箱）。
 5. 存檔後，用無痕視窗打開網站，應該會先看到 Cloudflare 的登入畫面。
+
+### 設定 ACCESS_TEAM_DOMAIN、ACCESS_AUD（後端驗證登入憑證要用）
+
+後端要知道兩件事，才能檢查登入憑證：「是哪個 Access 團隊發的」和「是發給哪個網站的」。
+這兩個值**不是金鑰、不是密碼**，可以直接寫在 `wrangler.jsonc`。
+沒設定（或還是 `REPLACE` 開頭的佔位字串）時，正式網站所有 API 都會回 403，誰都進不來——這是故意的，比較安全。
+
+1. **找團隊網域（ACCESS_TEAM_DOMAIN）**：
+   Cloudflare 後台 → **Zero Trust** → **Settings** → **Custom Pages**（或 **Team name and domain**），
+   會看到像 `your-team.cloudflareaccess.com` 的網址。只要這段網域，**不要**加 `https://`。
+2. **找 AUD 標籤（ACCESS_AUD）**：
+   **Zero Trust** → **Access** → **Applications** → 點剛剛建的應用程式 → **Overview**（概覽），
+   找到 **Application Audience (AUD) Tag**，是一長串英文數字，按旁邊的複製。
+3. 打開 `wrangler.jsonc`，在 `vars` 裡把佔位字串換掉：
+
+   ```jsonc
+   "vars": {
+     "ACCESS_TEAM_DOMAIN": "your-team.cloudflareaccess.com",
+     "ACCESS_AUD": "貼上剛剛複製的 AUD 標籤"
+   }
+   ```
+
+4. 重新上線（deploy）後生效。
+5. 檢查：用無痕視窗登入網站，看得到自己的名字和角色就成功；
+   直接用 `curl` 打 API（沒有登入憑證）應該被導到 Cloudflare 登入頁，或回 403。
+
+> 本機開發（`.dev.vars` 有 `DEV_AUTH="1"`）時不會檢查登入憑證，這兩個值不用設也能跑。
 
 ### 讓登入的人有角色
 
@@ -111,6 +142,20 @@ npx wrangler d1 execute yacht-order --remote --command "INSERT INTO users (email
 
 ### 要特別注意
 
-- 後端相信 `Cf-Access-Authenticated-User-Email` 這個標頭。如果網站有任何一個網址**沒有**被 Access 保護，
-  別人就可能自己偽造這個標頭。所以一定要確認所有網址（包括 `workers.dev` 網址和預覽網址）都在 Access 後面。
-- 正式環境不要設定 `DEV_AUTH`。
+- 後端**不再**直接相信 `Cf-Access-Authenticated-User-Email` 標頭，只相信驗證過簽章的登入憑證，
+  所以就算有人自己加這個標頭也冒充不了別人。
+- 仍然建議整個網站都放在 Access 後面；`workers.dev` 網址和預覽網址已在 `wrangler.jsonc` 關掉。
+- 正式環境不要設定 `DEV_AUTH`。設了等於關掉登入憑證檢查。
+
+## 6. 示範模式（沒有後端也能看畫面）
+
+給成品頁預覽或展示用：
+
+- 網址加上 `?demo=1`（例如 `http://localhost:8787/?demo=1`），或
+- 打開 `public/index.html` 時連不到後端，
+
+畫面會進入「示範模式」：上方有明顯的橘色列寫著「示範模式：假資料、不會存檔」，
+可以切換假角色（客戶1、客戶2、船廠人員、管理者）看不同角色看到的畫面。
+
+- 假資料寫在前端，內容和 `seeds/seed_demo.sql` 一樣。改了其中一邊，記得另一邊也要改。
+- 示範模式**完全不送請求給後端**，也不影響後端權限；它只是畫面展示。
