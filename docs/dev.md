@@ -10,7 +10,7 @@
 | 前端畫面 | `public/index.html` | 使用者看到的網頁 |
 | 後端程式 | `src/worker.js` | Cloudflare Worker（在 Cloudflare 上跑的小程式），負責查資料、檢查權限 |
 | 資料庫 | Cloudflare D1 | 雲端的表格式資料庫，名稱 `yacht-order` |
-| 資料表結構 | `migrations/0001_init.sql` | 遷移檔（migration）：建立資料表的指令，照順序套用 |
+| 資料表結構 | `migrations/0001_init.sql`、`migrations/0002_specs.sql` | 遷移檔（migration）：建立資料表的指令，照編號順序套用。0002 是需求暫存、規格書版本、意見 |
 | 假資料 | `seeds/seed_demo.sql` | 示範用的假帳號和假專案（@example.com）。放在 `migrations/` 外面，避免被當成遷移檔套用 |
 | 登入 | Cloudflare Access | Cloudflare 的登入關卡，先驗證身分才放行 |
 | 設定 | `wrangler.jsonc` | 告訴 Wrangler 後端在哪、前端在哪、資料庫是哪一個 |
@@ -42,10 +42,34 @@ npx wrangler d1 create yacht-order
 
 ```bash
 npx wrangler d1 execute yacht-order --local --file=migrations/0001_init.sql
+npx wrangler d1 execute yacht-order --local --file=migrations/0002_specs.sql
 npx wrangler d1 execute yacht-order --local --file=seeds/seed_demo.sql
 ```
 
 雲端（測試環境）：把上面的 `--local` 換成 `--remote`。
+
+### 已經建好 0001、只要補上 0002（需求表單 → 規格書）
+
+之前已經套用過 `0001_init.sql` 的資料庫，只要再跑一次 0002：
+
+```bash
+npx wrangler d1 execute yacht-order --local  --file=migrations/0002_specs.sql   # 本機
+npx wrangler d1 execute yacht-order --remote --file=migrations/0002_specs.sql   # 雲端測試環境
+```
+
+- 0002 會新增三張表：`requirement_drafts`（需求暫存，每個專案一份）、
+  `spec_versions`（規格書版本，每次儲存新增一列，不覆蓋、不刪除）、`spec_comments`（意見）。
+- 0002 不會改動 0001 的表，也不會刪任何資料。裡面都是 `CREATE ... IF NOT EXISTS`，重複執行不會出錯。
+- 沒套用 0002 就打需求、規格書的 API，後端會回 500（找不到資料表）。
+- 套到**正式資料庫**之前，先問過使用者（這是資料表結構變更）。
+
+檢查有沒有建好：
+
+```bash
+npx wrangler d1 execute yacht-order --local --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+```
+
+應該看得到 `requirement_drafts`、`spec_comments`、`spec_versions`。
 
 > 注意：假資料 `seeds/seed_demo.sql` 已經搬出 `migrations/` 資料夾，
 > 所以 `wrangler d1 migrations apply` 只會套用資料表結構，不會順便灌假資料。
@@ -77,6 +101,17 @@ npx wrangler d1 execute yacht-order --local --file=seeds/seed_demo.sql
 curl -H "X-Dev-User: customer1@example.com" http://localhost:8787/api/me
 curl -H "X-Dev-User: customer1@example.com" http://localhost:8787/api/projects
 curl -H "X-Dev-User: customer1@example.com" http://localhost:8787/api/projects/3   # 別人的專案 → 403
+
+# 需求暫存 → 產生規格書（寫入一律要 Content-Type: application/json）
+curl -X PUT -H "X-Dev-User: customer1@example.com" -H "Content-Type: application/json" \
+  -d '{"data":{"project_name":"示範專案 A-1","boat_type":"機動遊艇","loa":24,"beam":6,"usage":"私人","area":"沿海","passengers":8,"crew":2,"propulsion":"柴油內燃機","cabins":4}}' \
+  http://localhost:8787/api/projects/1/requirements
+curl -X POST -H "X-Dev-User: customer1@example.com" -H "Content-Type: application/json" -d '{}' \
+  http://localhost:8787/api/projects/1/spec/generate
+curl -H "X-Dev-User: customer1@example.com" http://localhost:8787/api/projects/1/spec/versions
+curl -X POST -H "X-Dev-User: customer1@example.com" -H "Content-Type: application/json" \
+  -d '{"spec_version":1,"type":"yard_suggestion","content":"測試"}' \
+  http://localhost:8787/api/projects/1/comments   # 客戶新增意見 → 403（只有船廠人員可以）
 ```
 
 ### DEV_AUTH 的安全規則（很重要）
@@ -158,4 +193,6 @@ npx wrangler d1 execute yacht-order --remote --command "INSERT INTO users (email
 可以切換假角色（客戶1、客戶2、船廠人員、管理者）看不同角色看到的畫面。
 
 - 假資料寫在前端，內容和 `seeds/seed_demo.sql` 一樣。改了其中一邊，記得另一邊也要改。
-- 示範模式**完全不送請求給後端**，也不影響後端權限；它只是畫面展示。
+- **進入示範模式後不送任何請求**；沒帶 `?demo=1` 時，開頁會先向同一網址探一次 `/api/me`，失敗才進示範模式。示範模式不影響後端權限；它只是畫面展示。
+- 示範模式也能完整操作「需求填寫」和「規格書」：資料只放在瀏覽器分頁的記憶體，**重新整理就消失**。
+  驗證規則、權限規則寫在前端，和 `src/worker.js` 的 `REQ_FIELDS`／`validateRequirement()` 一模一樣；改一邊要記得改另一邊。

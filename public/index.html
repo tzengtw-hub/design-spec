@@ -12,11 +12,14 @@
     --text: #1d2733;
     --muted: #5b6b7d;
     --danger: #a12626;
+    --danger-light: #fbeaea;
+    --ok: #1f6b3a;
+    --ok-light: #e5f4ea;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: system-ui, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
     font-size: 18px;
     line-height: 1.6;
     color: var(--text);
@@ -64,16 +67,18 @@
   }
   nav a:hover { background: var(--navy-light); }
   nav a.active { background: var(--navy); color: #fff; }
-  main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px; }
   h2 { font-size: 26px; margin: 0 0 16px; }
+  h3 { font-size: 21px; margin: 0 0 12px; color: var(--navy); }
   .card {
     background: #fff;
     border: 1px solid var(--line);
     border-radius: 10px;
     padding: 20px 24px;
+    margin-bottom: 16px;
   }
   table { width: 100%; border-collapse: collapse; font-size: 18px; }
-  th, td { text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--line); }
+  th, td { text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { background: var(--navy-light); color: var(--navy); }
   .muted { color: var(--muted); }
   .error { color: var(--danger); font-weight: 600; }
@@ -92,6 +97,9 @@
   }
   #demo-bar {
     display: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
     background: #ffe2b8;
     border-bottom: 3px solid #d9822b;
     color: #5a3200;
@@ -113,6 +121,177 @@
     padding: 4px 12px;
     margin-left: 8px;
   }
+
+  /* ---- 按鈕 ---- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 2px solid var(--navy);
+    background: #fff;
+    color: var(--navy);
+    font-size: 18px;
+    font-weight: 600;
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--navy-light); }
+  .btn-primary { background: var(--navy); color: #fff; }
+  .btn-primary:hover { background: #0c2742; }
+  .btn-small { min-height: 40px; padding: 4px 14px; font-size: 16px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn-row .spacer { flex: 1; }
+
+  .notice {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background: var(--navy-light);
+    border: 1px solid var(--line);
+  }
+  .notice.demo { background: #fff1dc; border-color: #e7b06b; color: #5a3200; }
+  .notice.ok { background: var(--ok-light); border-color: #9fd0ae; color: var(--ok); }
+  .notice.err { background: var(--danger-light); border-color: #e2a3a3; color: var(--danger); }
+
+  /* ---- 步驟指示 ---- */
+  .steps {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .steps .step {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 2px solid var(--line);
+    background: #fff;
+    color: var(--text);
+    font-size: 17px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .steps .num {
+    display: inline-flex;
+    width: 28px; height: 28px;
+    align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--navy-light);
+    color: var(--navy);
+    font-weight: 700;
+  }
+  .steps .step.active { border-color: var(--navy); background: var(--navy); color: #fff; }
+  .steps .step.active .num { background: #fff; }
+  .steps .step.done { border-color: #9fd0ae; }
+  .steps .step.done .num { background: var(--ok-light); color: var(--ok); }
+  .steps .step.has-error { border-color: var(--danger); }
+  .steps .step.has-error .num { background: var(--danger-light); color: var(--danger); }
+  .steps .tag { font-size: 14px; }
+
+  /* ---- 表單欄位 ---- */
+  .field { margin-bottom: 20px; border: 0; padding: 0; }
+  .field-label, .field legend { display: block; font-weight: 700; margin-bottom: 6px; padding: 0; }
+  .req, .opt {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .req { background: var(--danger-light); color: var(--danger); }
+  .opt { background: var(--navy-light); color: var(--muted); }
+  .hint { font-size: 15px; color: var(--muted); margin: 0 0 6px; }
+  .field input[type=text], .field input[type=number], .field input[type=date], .field textarea, .field select, .comment-form select, .comment-form textarea {
+    width: 100%;
+    max-width: 480px;
+    font-size: 18px;
+    font-family: inherit;
+    min-height: 48px;
+    padding: 8px 12px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+  .field textarea, .comment-form textarea { max-width: 100%; min-height: 120px; }
+  .field.has-error input, .field.has-error textarea { border-color: var(--danger); }
+  .field-error { color: var(--danger); font-weight: 600; margin: 4px 0 0; min-height: 0; }
+  .field-error:empty { display: none; }
+  .choices { display: flex; flex-wrap: wrap; gap: 10px; }
+  .choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 6px 16px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+  }
+  .choice input { width: 22px; height: 22px; margin: 0; }
+  .choice:has(input:checked) { border-color: var(--navy); background: var(--navy-light); }
+  .field.has-error .choices .choice { border-color: #e2a3a3; }
+
+  /* ---- 規格書 ---- */
+  .spec-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .spec-layout { grid-template-columns: 1fr; } }
+  .spec-doc { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 24px 28px; }
+  .spec-doc h2.doc-title { text-align: center; font-size: 26px; margin: 8px 0 20px; }
+  .print-header {
+    display: flex; flex-wrap: wrap; gap: 4px 24px;
+    border-bottom: 2px solid var(--navy);
+    padding-bottom: 8px;
+    font-size: 16px;
+  }
+  .spec-doc section { margin-bottom: 20px; }
+  .spec-doc th { width: 40%; }
+  .pre { white-space: pre-wrap; word-break: break-word; }
+  .side-list { list-style: none; margin: 0; padding: 0; }
+  .side-list li { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  .side-list li.current { background: var(--navy-light); margin: 0 -12px; padding: 10px 12px; border-radius: 6px; }
+  .side-list .meta { font-size: 15px; color: var(--muted); }
+  .badge {
+    display: inline-block;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .badge.customer_request { background: #e3ecfb; color: #1c4c9c; }
+  .badge.yard_suggestion { background: #fdf0d6; color: #7a4b00; }
+  .badge.ver { background: var(--navy-light); color: var(--navy); }
+  .comment-form { margin-top: 16px; border-top: 2px solid var(--line); padding-top: 12px; }
+  .comment-form .field { margin-bottom: 12px; }
+  .project-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* ---- 列印（匯出 PDF）：只印規格書本體與頁首 ---- */
+  @page { size: A4; margin: 15mm; }
+  @media print {
+    body { background: #fff; font-size: 12pt; }
+    header, nav, #demo-bar, #dev-bar, .spec-side, .spec-toolbar, .no-print, .notice { display: none !important; }
+    main { max-width: none; padding: 0; }
+    .spec-layout { display: block; }
+    .spec-doc { border: 0; border-radius: 0; padding: 0; }
+    .spec-doc h2.doc-title { font-size: 18pt; }
+    .print-header { font-size: 10pt; }
+    table { font-size: 11pt; }
+    th, td { padding: 6px 8px; }
+    th { background: #eef2f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .spec-doc section { break-inside: auto; }
+    .spec-doc h3 { break-after: avoid; font-size: 14pt; }
+    tr { break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -121,7 +300,7 @@
     <div id="who">讀取登入資訊中…</div>
   </header>
 
-  <!-- 示範模式：網址帶 ?demo=1，或不在正式網站上（非 http(s)、hostname 空白、在 iframe 裡）且連不到後端時出現。只用前端假資料，完全不送請求給後端。 -->
+  <!-- 示範模式：網址帶 ?demo=1，或不在正式網站上（非 http(s)、hostname 空白、在 iframe 裡）且連不到後端時出現。只用前端假資料。進入示範模式後不送任何請求；沒帶 ?demo=1 時，開頁會先向同一網址探一次 /api/me，失敗才進示範模式。 -->
   <div id="demo-bar" role="status">
     <strong>示範模式：假資料、不會存檔</strong>
     <label for="demo-role">切換假角色</label>
@@ -187,11 +366,295 @@
   // 示範模式：true 時完全不送請求給後端（api() 會直接拒絕）
   let demoMode = false;
 
+  // ======================================================================
+  // 需求表單欄位（SDD-001 附錄 A，暫用假範例）
+  // 重要：src/worker.js 有一份一模一樣的 REQ_FIELDS 與 validateRequirement()。
+  //       改了這邊，記得也改那邊，兩邊規則要一致（後端才是真正的把關）。
+  // ======================================================================
+  const STEPS = [
+    { step: 1, title: "基本" },
+    { step: 2, title: "用途" },
+    { step: 3, title: "動力" },
+    { step: 4, title: "艙室" },
+    { step: 5, title: "設備" },
+    { step: 6, title: "預算與交期" }
+  ];
+
+  const REQ_FIELDS = [
+    { key: "project_name",  step: 1, label: "專案名稱",           type: "text",    required: true,  maxLength: 100 },
+    { key: "boat_type",     step: 1, label: "船型",               type: "select",  required: true,  options: ["機動遊艇", "帆船", "雙體船"] },
+    { key: "loa",           step: 1, label: "船長 LOA（公尺）",   type: "number",  required: true,  min: 12, max: 60 },
+    { key: "beam",          step: 1, label: "船寬（公尺）",       type: "number",  required: true,  min: 3, max: 12 },
+    { key: "usage",         step: 2, label: "用途",               type: "select",  required: true,  options: ["私人", "商業包租"] },
+    { key: "area",          step: 2, label: "航區",               type: "select",  required: true,  options: ["近岸", "沿海", "遠洋"] },
+    { key: "passengers",    step: 2, label: "乘客人數",           type: "integer", required: true,  min: 0, max: 36 },
+    { key: "crew",          step: 2, label: "船員人數",           type: "integer", required: true,  min: 0, max: 20 },
+    { key: "propulsion",    step: 3, label: "動力型式",           type: "select",  required: true,  options: ["柴油內燃機", "油電混合", "純電"] },
+    { key: "max_speed",     step: 3, label: "最高航速（節）",     type: "number",  required: false, min: 0 },
+    { key: "cruise_speed",  step: 3, label: "巡航航速（節）",     type: "number",  required: false, min: 0 },
+    { key: "cabins",        step: 4, label: "客艙數",             type: "integer", required: true,  min: 0, max: 10 },
+    { key: "crew_cabins",   step: 4, label: "船員艙數",           type: "integer", required: false, min: 0 },
+    { key: "bathrooms",     step: 4, label: "衛浴數",             type: "integer", required: false, min: 0 },
+    { key: "equipment",     step: 5, label: "設備選項",           type: "multi",   required: false, options: ["減搖鰭", "發電機", "造水機", "空調", "甲板吊車", "衛星通訊"] },
+    { key: "budget",        step: 6, label: "預算（新台幣萬元）", type: "number",  required: false, min: 0 },
+    { key: "delivery_date", step: 6, label: "希望交船日期",       type: "date",    required: false },
+    { key: "other_notes",   step: 6, label: "其他需求",           type: "longtext", required: false, maxLength: 2000 }
+  ];
+  const REQ_FIELD_KEYS = REQ_FIELDS.map(f => f.key);
+  const FIELD_BY_KEY = {};
+  REQ_FIELDS.forEach(f => { FIELD_BY_KEY[f.key] = f; });
+
+  function isEmptyValue(f, raw) {
+    if (raw === undefined || raw === null) return true;
+    if (typeof raw === "string" && raw.trim() === "") return true;
+    if (f.type === "multi" && Array.isArray(raw) && raw.length === 0) return true;
+    return false;
+  }
+
+  function isValidDate(s) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const parts = s.split("-").map(Number);
+    const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    return dt.getUTCFullYear() === parts[0] && dt.getUTCMonth() === parts[1] - 1 && dt.getUTCDate() === parts[2];
+  }
+
+  function validateField(f, raw) {
+    const L = "「" + f.label + "」";
+    switch (f.type) {
+      case "text":
+      case "longtext": {
+        if (typeof raw !== "string") return { error: L + "格式不正確。" };
+        const v = raw.trim();
+        if (f.maxLength && v.length > f.maxLength) return { error: L + "最多 " + f.maxLength + " 個字。" };
+        return { value: v };
+      }
+      case "select": {
+        if (typeof raw !== "string" || !f.options.includes(raw)) {
+          return { error: L + "請從選項中選擇：" + f.options.join("、") + "。" };
+        }
+        return { value: raw };
+      }
+      case "number":
+      case "integer": {
+        let n;
+        if (typeof raw === "number") n = raw;
+        else if (typeof raw === "string" && /^-?\d+(\.\d+)?$/.test(raw.trim())) n = Number(raw.trim());
+        else return { error: L + "必須是數字。" };
+        if (!Number.isFinite(n)) return { error: L + "必須是數字。" };
+        if (f.type === "integer" && !Number.isInteger(n)) return { error: L + "必須是整數。" };
+        const hasMin = typeof f.min === "number", hasMax = typeof f.max === "number";
+        if (hasMin && hasMax && (n < f.min || n > f.max)) return { error: L + "必須介於 " + f.min + " 到 " + f.max + "。" };
+        if (hasMin && n < f.min) return { error: L + "不能小於 " + f.min + "。" };
+        if (hasMax && n > f.max) return { error: L + "不能大於 " + f.max + "。" };
+        return { value: n };
+      }
+      case "multi": {
+        if (!Array.isArray(raw)) return { error: L + "格式不正確。" };
+        for (const item of raw) {
+          if (typeof item !== "string" || !f.options.includes(item)) {
+            return { error: L + "只能選：" + f.options.join("、") + "。" };
+          }
+        }
+        return { value: f.options.filter(o => raw.includes(o)) };
+      }
+      case "date": {
+        if (typeof raw !== "string" || !isValidDate(raw.trim())) return { error: L + "日期格式不正確（例如 2027-06-30）。" };
+        return { value: raw.trim() };
+      }
+      default:
+        return { error: L + "格式不正確。" };
+    }
+  }
+
+  // requireAll=true：必填一定要有（產生、儲存規格書）；false：暫存用，可缺必填
+  function validateRequirement(input, requireAll) {
+    const errors = {};
+    const missing = [];
+    const data = {};
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      return { data, errors: { _form: "需求資料格式不正確。" }, missing: REQ_FIELDS.filter(f => f.required).map(f => f.key) };
+    }
+    for (const f of REQ_FIELDS) {
+      const raw = input[f.key];
+      if (isEmptyValue(f, raw)) {
+        if (f.required) {
+          missing.push(f.key);
+          if (requireAll) errors[f.key] = "請填寫「" + f.label + "」。";
+        }
+        continue;
+      }
+      const r = validateField(f, raw);
+      if (r.error) errors[f.key] = r.error;
+      else data[f.key] = r.value;
+    }
+    return { data, errors, missing };
+  }
+
+  const COMMENT_TYPES = ["customer_request", "yard_suggestion"];
+  const COMMENT_TYPE_NAMES = { customer_request: "客戶需求", yard_suggestion: "船廠建議" };
+  const COMMENT_MAX = 2000;
+  const MAX_BODY_BYTES = 64 * 1024;
+
+  // ---- 權限（和後端 src/worker.js 同一套規則；這裡只決定畫面，真正的擋在後端） ----
+  function isStaffOrAdmin(user) { return !!user && (user.role === "staff" || user.role === "admin"); }
+  function canAccessProject(user, project) {
+    if (isStaffOrAdmin(user)) return true;
+    return !!user && user.role === "customer" &&
+      String(project.owner_email || "").toLowerCase() === String(user.email || "").toLowerCase();
+  }
+  function canAddComment(user, project) { return isStaffOrAdmin(user) && canAccessProject(user, project); }
+
   // 跟後端 listProjects() 同一套規則：客戶只看自己的；船廠人員、管理者看全部
   function demoListProjects(user) {
     if (user.role === "staff" || user.role === "admin") return DEMO_PROJECTS.slice();
     const mine = user.email.toLowerCase();
     return DEMO_PROJECTS.filter(p => p.owner_email.toLowerCase() === mine);
+  }
+
+  // ======================================================================
+  // 示範模式的「假後端」：資料只放在記憶體（重新整理就消失），規則和 src/worker.js 一致
+  // ======================================================================
+  const demoDB = { drafts: {}, specs: {}, comments: {}, nextCommentId: 1 };
+
+  function nowStr() { return new Date().toISOString().slice(0, 19).replace("T", " "); }
+  function clone(x) { return x == null ? x : JSON.parse(JSON.stringify(x)); }
+  function makeErr(status, message, fields) {
+    const e = new Error(message);
+    e.status = status;
+    if (fields) e.fields = fields;
+    return e;
+  }
+
+  function demoInsertSpec(pid, data, note) {
+    const list = demoDB.specs[pid] || (demoDB.specs[pid] = []);
+    const version = list.reduce((m, s) => Math.max(m, s.version), 0) + 1;
+    const row = { version, data: clone(data), note, created_by: me.email, created_by_name: me.name, created_at: nowStr() };
+    list.push(row);
+    return clone(row);
+  }
+
+  async function demoApi(method, path, body) {
+    const user = me;
+    const notAllowed = () => makeErr(405, "這支 API 不接受這種請求方式。");
+    // 判斷順序與後端 handleApi 一致：方法 → 路徑（404）→ 專案權限 → 方法是否適用這個路徑（405）→ 資料格式
+    if (!["GET", "PUT", "POST"].includes(method)) throw notAllowed();
+    path = path.replace(/\/+$/, "");
+    if (path === "/api/me") {
+      if (method !== "GET") throw notAllowed();
+      return clone(user);
+    }
+    if (path === "/api/projects") {
+      if (method !== "GET") throw notAllowed();
+      return { projects: demoListProjects(user) };
+    }
+    const m = path.match(/^\/api\/projects\/(\d{1,12})(\/.*)?$/);
+    if (!m) throw makeErr(404, "沒有這支 API。");
+    const sub = m[2] || "";
+
+    // 每個已知路徑可用的方法；不在表上的路徑回 404（與後端一致）
+    let allowed = null;
+    if (sub === "") allowed = ["GET"];
+    else if (sub === "/requirements") allowed = ["GET", "PUT"];
+    else if (sub === "/spec") allowed = ["GET", "POST"];
+    else if (sub === "/spec/generate") allowed = ["POST"];
+    else if (sub === "/spec/versions") allowed = ["GET"];
+    else if (/^\/spec\/versions\/\d{1,9}$/.test(sub)) allowed = ["GET"];
+    else if (/^\/spec\/restore\/\d{1,9}$/.test(sub)) allowed = ["POST"];
+    else if (sub === "/comments") allowed = ["GET", "POST"];
+    if (!allowed) throw makeErr(404, "沒有這支 API。");
+
+    const project = DEMO_PROJECTS.find(p => p.id === Number(m[1]));
+    if (!project) {
+      if (!isStaffOrAdmin(user)) throw makeErr(403, "你沒有權限看這個專案。");
+      throw makeErr(404, "找不到這個專案。");
+    }
+    if (!canAccessProject(user, project)) throw makeErr(403, "你沒有權限看這個專案。");
+
+    if (!allowed.includes(method)) throw notAllowed();
+
+    if (method !== "GET") {
+      if (!body || typeof body !== "object" || Array.isArray(body)) throw makeErr(400, "資料格式錯誤（必須是 JSON 物件）。");
+      if (new TextEncoder().encode(JSON.stringify(body)).length > MAX_BODY_BYTES) throw makeErr(413, "送出的資料太大（上限 64KB）。");
+    }
+    const pid = project.id;
+    const specs = demoDB.specs[pid] || [];
+    const invalid = (errors) => makeErr(400, "資料有誤，請檢查標示的欄位。", errors);
+
+    if (sub === "" && method === "GET") return { project: clone(project) };
+
+    if (sub === "/requirements") {
+      if (method === "GET") return { draft: clone(demoDB.drafts[pid] || null) };
+      if (method === "PUT") {
+        const r = validateRequirement(body.data, false);
+        if (Object.keys(r.errors).length) throw invalid(r.errors);
+        demoDB.drafts[pid] = { data: r.data, updated_by: user.email, updated_at: nowStr() };
+        return { draft: clone(demoDB.drafts[pid]), missing: r.missing };
+      }
+    }
+    if (sub === "/spec/generate" && method === "POST") {
+      const d = demoDB.drafts[pid];
+      if (!d) throw makeErr(400, "還沒有填寫需求，請先填寫並暫存需求表單。");
+      const r = validateRequirement(d.data, true);
+      if (Object.keys(r.errors).length) throw invalid(r.errors);
+      return { spec: demoInsertSpec(pid, r.data, "由需求產生") };
+    }
+    if (sub === "/spec") {
+      if (method === "GET") {
+        const latest = specs.reduce((a, s) => (!a || s.version > a.version ? s : a), null);
+        return { spec: clone(latest) };
+      }
+      if (method === "POST") {
+        const r = validateRequirement(body.data, true);
+        if (Object.keys(r.errors).length) throw invalid(r.errors);
+        return { spec: demoInsertSpec(pid, r.data, "編輯後儲存") };
+      }
+    }
+    if (sub === "/spec/versions" && method === "GET") {
+      return {
+        versions: specs.slice().sort((a, b) => b.version - a.version).map(s => ({
+          version: s.version, note: s.note, created_by: s.created_by, created_by_name: s.created_by_name, created_at: s.created_at
+        }))
+      };
+    }
+    let mv = sub.match(/^\/spec\/versions\/(\d{1,9})$/);
+    if (mv && method === "GET") {
+      const s = specs.find(x => x.version === Number(mv[1]));
+      if (!s) throw makeErr(404, "找不到這個版本。");
+      return { spec: clone(s) };
+    }
+    mv = sub.match(/^\/spec\/restore\/(\d{1,9})$/);
+    if (mv && method === "POST") {
+      const v = Number(mv[1]);
+      const s = specs.find(x => x.version === v);
+      if (!s) throw makeErr(404, "找不到這個版本。");
+      return { spec: demoInsertSpec(pid, s.data, "還原自 v" + v) };
+    }
+    if (sub === "/comments") {
+      if (method === "GET") return { comments: clone(demoDB.comments[pid] || []) };
+      if (method === "POST") {
+        if (!canAddComment(user, project)) throw makeErr(403, "只有船廠人員可以新增意見。");
+        const errors = {};
+        // 只接受真正的整數（與後端 addComment 一致）
+        const ver = body.spec_version;
+        if (typeof ver !== "number" || !Number.isInteger(ver) || ver < 1) errors.spec_version = "請指定規格書版本（必須是 1 以上的整數）。";
+        let fieldKey = body.field_key;
+        if (fieldKey === undefined || fieldKey === null || fieldKey === "") fieldKey = null;
+        else if (typeof fieldKey !== "string" || !REQ_FIELD_KEYS.includes(fieldKey)) errors.field_key = "欄位不正確。";
+        if (!COMMENT_TYPES.includes(body.type)) errors.type = "類型必須是「客戶需求」或「船廠建議」。";
+        const content = typeof body.content === "string" ? body.content.trim() : "";
+        if (!content) errors.content = "請填寫意見內容。";
+        else if (content.length > COMMENT_MAX) errors.content = "意見最多 " + COMMENT_MAX + " 個字。";
+        if (Object.keys(errors).length) throw invalid(errors);
+        if (!specs.some(s => s.version === ver)) throw invalid({ spec_version: "找不到這個規格書版本。" });
+        const c = {
+          id: demoDB.nextCommentId++, spec_version: ver, field_key: fieldKey, type: body.type, content,
+          author_email: user.email, author_name: user.name, created_at: nowStr()
+        };
+        (demoDB.comments[pid] || (demoDB.comments[pid] = [])).push(c);
+        return { comment: clone(c) };
+      }
+    }
+    throw notAllowed();
   }
 
   // ---- 本機開發用：localhost 才顯示假帳號選單 ----
@@ -207,17 +670,24 @@
     });
   }
 
-  async function api(path) {
+  async function api(path, opts) {
     if (demoMode) {
       // 保險：示範模式絕對不碰後端
       throw new Error("示範模式不會連線到後端。");
     }
+    opts = opts || {};
+    const init = { method: opts.method || "GET", credentials: "same-origin" };
     const headers = {};
     const devUser = isLocal ? localStorage.getItem("devUser") : "";
     if (devUser) headers["X-Dev-User"] = devUser;
+    if (opts.body !== undefined) {
+      headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(opts.body);
+    }
+    init.headers = headers;
     let res;
     try {
-      res = await fetch(path, { headers, credentials: "same-origin" });
+      res = await fetch(path, init);
     } catch (e) {
       const err = new Error("連不到伺服器。");
       err.noBackend = true;
@@ -236,15 +706,37 @@
       const msg = (body && body.error) || ("伺服器回應錯誤（" + res.status + "）");
       const err = new Error(msg);
       err.status = res.status;
+      if (body.fields && typeof body.fields === "object") err.fields = body.fields;
       throw err;
     }
     return body;
+  }
+
+  // 所有資料讀寫都走這裡：示範模式用記憶體假後端，否則打真正的 API
+  function call(method, path, body) {
+    if (demoMode) return demoApi(method, path, body === undefined ? undefined : clone(body));
+    return api(path, { method, body });
   }
 
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // D1 的時間是 UTC「YYYY-MM-DD HH:MM:SS」，轉成本地時間顯示
+  function parseTime(s) {
+    if (!s) return null;
+    const d = new Date(String(s).replace(" ", "T") + "Z");
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function fmtTime(s) {
+    const d = parseTime(s);
+    return d ? d.toLocaleString("zh-TW", { hour12: false }) : String(s || "");
+  }
+  function fmtDate(s) {
+    const d = parseTime(s);
+    return d ? d.toLocaleDateString("zh-TW") : String(s || "");
   }
 
   function visiblePages() {
@@ -257,42 +749,762 @@
     ).join("");
   }
 
+  // 一次性提示（例如「已產生規格書 v3」），下一次畫面顯示後就清掉
+  let flash = "";
+  function takeFlash() {
+    const f = flash;
+    flash = "";
+    return f ? '<div class="notice ok" role="status">' + esc(f) + "</div>" : "";
+  }
+
+  function demoNotice() {
+    return demoMode
+      ? '<div class="notice demo">示範模式：資料只放在這個分頁的記憶體裡，<strong>重新整理就會消失</strong>，不會存檔。</div>'
+      : "";
+  }
+
+  // 每次換頁 +1；非同步讀完資料時，如果使用者已經換頁就不要蓋掉新畫面
+  let routeSeq = 0;
+
   async function renderProjects(main) {
     main.innerHTML = '<h2>專案列表</h2><div class="card"><p class="muted">讀取中…</p></div>';
+    const seq = routeSeq;
     try {
-      const data = demoMode
-        ? { projects: demoListProjects(me) }
-        : await api("/api/projects");
+      const data = await call("GET", "/api/projects");
+      if (seq !== routeSeq) return;
       const rows = data.projects || [];
       const body = rows.length === 0
         ? '<p class="muted">目前沒有專案。</p>'
-        : "<table><thead><tr><th>專案名稱</th><th>船型</th><th>狀態</th></tr></thead><tbody>" +
-          rows.map(r => "<tr><td>" + esc(r.name) + "</td><td>" + esc(r.boat_type) + "</td><td>" + esc(r.status) + "</td></tr>").join("") +
+        : "<table><thead><tr><th>專案名稱</th><th>船型</th><th>狀態</th><th>操作</th></tr></thead><tbody>" +
+          rows.map(r => "<tr><td>" + esc(r.name) + "</td><td>" + esc(r.boat_type) + "</td><td>" + esc(r.status) + "</td>" +
+            '<td><div class="project-actions">' +
+            '<a class="btn btn-small" href="#requirement/' + esc(r.id) + '">需求填寫</a>' +
+            '<a class="btn btn-small" href="#spec/' + esc(r.id) + '">規格書</a>' +
+            "</div></td></tr>").join("") +
           "</tbody></table>";
       main.innerHTML = '<h2>專案列表</h2><div class="card">' + body + "</div>";
     } catch (e) {
+      if (seq !== routeSeq) return;
       main.innerHTML = '<h2>專案列表</h2><div class="card"><p class="error">' + esc(e.message) + "</p></div>";
     }
   }
+
+  // 從導覽列直接點「需求填寫／規格書」（沒指定專案）：先選專案
+  async function renderProjectPicker(main, pageId, title) {
+    main.innerHTML = "<h2>" + esc(title) + '</h2><div class="card"><p class="muted">讀取中…</p></div>';
+    const seq = routeSeq;
+    try {
+      const data = await call("GET", "/api/projects");
+      if (seq !== routeSeq) return;
+      const rows = data.projects || [];
+      const body = rows.length === 0
+        ? '<p class="muted">目前沒有專案。</p>'
+        : '<p>請選擇專案：</p><div class="btn-row">' +
+          rows.map(r => '<a class="btn" href="#' + esc(pageId) + "/" + esc(r.id) + '">' + esc(r.name) + "</a>").join("") +
+          "</div>";
+      main.innerHTML = "<h2>" + esc(title) + '</h2><div class="card">' + body + "</div>";
+    } catch (e) {
+      if (seq !== routeSeq) return;
+      main.innerHTML = "<h2>" + esc(title) + '</h2><div class="card"><p class="error">' + esc(e.message) + "</p></div>";
+    }
+  }
+
+  // ---------- 共用：表單欄位畫面與讀值 ----------
+
+  function rangeHint(f) {
+    const parts = [];
+    if (f.type === "integer") parts.push("整數");
+    if (f.type === "number" || f.type === "integer") {
+      if (typeof f.min === "number" && typeof f.max === "number") parts.push("範圍 " + f.min + "–" + f.max);
+      else if (typeof f.min === "number") parts.push("最小 " + f.min);
+    }
+    if (f.maxLength) parts.push("最多 " + f.maxLength + " 字");
+    if (f.type === "multi") parts.push("可複選");
+    return parts.length ? '<p class="hint">' + esc(parts.join("，")) + "</p>" : "";
+  }
+
+  function fieldHtml(f, value, err, prefix) {
+    const id = prefix + f.key;
+    const tag = f.required ? '<span class="req">必填</span>' : '<span class="opt">選填</span>';
+    const errHtml = '<p class="field-error" id="' + esc(id) + '-err" role="alert">' + esc(err || "") + "</p>";
+    const cls = "field" + (err ? " has-error" : "");
+    const v = value == null ? "" : value;
+    const aria = ' aria-describedby="' + esc(id) + '-err"' + (err ? ' aria-invalid="true"' : "");
+
+    if (f.type === "select" || f.type === "multi") {
+      const isMulti = f.type === "multi";
+      const selected = isMulti ? (Array.isArray(v) ? v : []) : [v];
+      return '<fieldset class="' + cls + '" data-field="' + esc(f.key) + '"><legend>' + esc(f.label) + tag + "</legend>" +
+        rangeHint(f) + '<div class="choices">' +
+        f.options.map(o =>
+          '<label class="choice"><input type="' + (isMulti ? "checkbox" : "radio") + '" name="' + esc(id) + '" value="' + esc(o) + '"' +
+          ' data-key="' + esc(f.key) + '"' + (selected.includes(o) ? " checked" : "") + aria + "><span>" + esc(o) + "</span></label>"
+        ).join("") + "</div>" + errHtml + "</fieldset>";
+    }
+
+    let input;
+    if (f.type === "longtext") {
+      input = '<textarea id="' + esc(id) + '" data-key="' + esc(f.key) + '"' + (f.maxLength ? ' maxlength="' + f.maxLength + '"' : "") + aria + ">" + esc(v) + "</textarea>";
+    } else {
+      let attrs = "";
+      let type = "text";
+      if (f.type === "number" || f.type === "integer") {
+        type = "number";
+        attrs += ' inputmode="' + (f.type === "integer" ? "numeric" : "decimal") + '" step="' + (f.type === "integer" ? "1" : "any") + '"';
+        if (typeof f.min === "number") attrs += ' min="' + f.min + '"';
+        if (typeof f.max === "number") attrs += ' max="' + f.max + '"';
+      } else if (f.type === "date") {
+        type = "date";
+      } else if (f.maxLength) {
+        attrs += ' maxlength="' + f.maxLength + '"';
+      }
+      input = '<input type="' + type + '" id="' + esc(id) + '" data-key="' + esc(f.key) + '" value="' + esc(v) + '"' + attrs + aria + ">";
+    }
+    return '<div class="' + cls + '" data-field="' + esc(f.key) + '"><label class="field-label" for="' + esc(id) + '">' +
+      esc(f.label) + tag + "</label>" + rangeHint(f) + input + errHtml + "</div>";
+  }
+
+  // 從畫面讀出欄位值，寫進 data；數字欄打了不是數字的字，放進 bad
+  function collectFields(container, fields, prefix, data, bad) {
+    for (const f of fields) {
+      const id = prefix + f.key;
+      if (f.type === "select") {
+        const el = container.querySelector('input[name="' + id + '"]:checked');
+        data[f.key] = el ? el.value : "";
+      } else if (f.type === "multi") {
+        data[f.key] = Array.from(container.querySelectorAll('input[name="' + id + '"]:checked')).map(el => el.value);
+      } else {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if ((f.type === "number" || f.type === "integer") && el.validity && el.validity.badInput) {
+          bad.add(f.key);
+          data[f.key] = "";
+        } else {
+          bad.delete(f.key);
+          data[f.key] = el.value;
+        }
+      }
+    }
+  }
+
+  function withBadInputs(errors, bad) {
+    bad.forEach(k => { if (FIELD_BY_KEY[k]) errors[k] = "「" + FIELD_BY_KEY[k].label + "」必須是數字。"; });
+    return errors;
+  }
+
+  // 把單一欄位的錯誤直接更新在畫面上（打字時的即時提示，不重畫整頁）
+  function showFieldError(prefix, key, msg) {
+    const box = document.querySelector('[data-field="' + key + '"]');
+    const p = document.getElementById(prefix + key + "-err");
+    if (box) box.classList.toggle("has-error", !!msg);
+    if (p) p.textContent = msg || "";
+  }
+
+  function liveCheck(prefix, data, bad, key) {
+    const f = FIELD_BY_KEY[key];
+    if (!f) return "";
+    let msg = "";
+    if (bad.has(key)) msg = "「" + f.label + "」必須是數字。";
+    else if (!isEmptyValue(f, data[key])) msg = validateField(f, data[key]).error || "";
+    showFieldError(prefix, key, msg);
+    return msg;
+  }
+
+  // ======================================================================
+  // 畫面 3：需求填寫（分 6 步、可暫存、最後一步產生規格書）
+  // ======================================================================
+  let reqState = null;
+
+  function stepFields(step) { return REQ_FIELDS.filter(f => f.step === step); }
+
+  async function renderRequirement(main, pidText) {
+    if (!pidText) return renderProjectPicker(main, "requirement", "需求填寫");
+    const pid = Number(pidText);
+    main.innerHTML = '<h2>需求填寫</h2><div class="card"><p class="muted">讀取中…</p></div>';
+    const seq = routeSeq;
+    try {
+      const [p, r] = await Promise.all([
+        call("GET", "/api/projects/" + pid),
+        call("GET", "/api/projects/" + pid + "/requirements")
+      ]);
+      if (seq !== routeSeq) return;
+      let data;
+      if (r.draft && r.draft.data) {
+        data = clone(r.draft.data);
+      } else {
+        // 還沒暫存過：先帶入專案名稱和船型，客戶可以再改
+        data = { project_name: p.project.name };
+        if (FIELD_BY_KEY.boat_type.options.includes(p.project.boat_type)) data.boat_type = p.project.boat_type;
+      }
+      reqState = {
+        pid, project: p.project, data, bad: new Set(), errors: {}, step: 1, maxVisited: 1,
+        savedAt: r.draft ? r.draft.updated_at : null, savedBy: r.draft ? r.draft.updated_by : null,
+        message: "", messageKind: "", busy: false
+      };
+      drawRequirement();
+    } catch (e) {
+      if (seq !== routeSeq) return;
+      main.innerHTML = '<h2>需求填寫</h2><div class="card"><p class="error">' + esc(e.message) + "</p>" +
+        '<p><a class="btn" href="#projects">回專案列表</a></p></div>';
+    }
+  }
+
+  function drawRequirement() {
+    const s = reqState;
+    const main = document.getElementById("main");
+    const fields = stepFields(s.step);
+    const isLast = s.step === STEPS.length;
+
+    const stepsHtml = '<ol class="steps" aria-label="填寫步驟">' + STEPS.map(st => {
+      const fs = stepFields(st.step);
+      const hasErr = fs.some(f => s.errors[f.key]);
+      const reqFilled = fs.filter(f => f.required).every(f => !isEmptyValue(f, s.data[f.key]));
+      const done = !hasErr && reqFilled && st.step !== s.step && st.step <= s.maxVisited;
+      const cls = "step" + (st.step === s.step ? " active" : "") + (hasErr ? " has-error" : (done ? " done" : ""));
+      const tag = hasErr ? '<span class="tag">（有錯誤）</span>' : (done ? '<span class="tag">（已填）</span>' : "");
+      return '<li><button type="button" class="' + cls + '" data-action="req-goto" data-step="' + st.step + '"' +
+        (st.step === s.step ? ' aria-current="step"' : "") + '><span class="num">' + st.step + "</span>" + esc(st.title) + tag + "</button></li>";
+    }).join("") + "</ol>";
+
+    const saved = s.savedAt
+      ? "上次暫存：" + esc(fmtTime(s.savedAt)) + (s.savedBy ? "（" + esc(s.savedBy) + "）" : "")
+      : "尚未暫存";
+    const msg = s.message ? '<div class="notice ' + esc(s.messageKind) + '" role="status">' + esc(s.message) + "</div>" : "";
+    const formErr = s.errors._form ? '<p class="error">' + esc(s.errors._form) + "</p>" : "";
+
+    main.innerHTML =
+      "<h2>需求填寫：" + esc(s.project.name) + "</h2>" +
+      demoNotice() + takeFlash() + msg +
+      stepsHtml +
+      '<div class="card" id="req-form">' +
+        "<h3>第 " + s.step + " 步（共 " + STEPS.length + " 步）：" + esc(STEPS[s.step - 1].title) + "</h3>" +
+        formErr +
+        fields.map(f => fieldHtml(f, s.data[f.key], s.errors[f.key], "rq-")).join("") +
+        '<div class="btn-row">' +
+          '<button type="button" class="btn" data-action="req-prev"' + (s.step === 1 || s.busy ? " disabled" : "") + ">上一步</button>" +
+          '<button type="button" class="btn" data-action="req-save"' + (s.busy ? " disabled" : "") + ">暫存</button>" +
+          '<span class="spacer"></span>' +
+          (isLast
+            ? '<button type="button" class="btn btn-primary" data-action="req-generate"' + (s.busy ? " disabled" : "") + ">產生規格書</button>"
+            : '<button type="button" class="btn btn-primary" data-action="req-next"' + (s.busy ? " disabled" : "") + ">下一步</button>") +
+        "</div>" +
+        '<p class="muted">' + saved + "</p>" +
+      "</div>" +
+      '<p class="btn-row"><a class="btn" href="#projects">回專案列表</a><a class="btn" href="#spec/' + esc(s.pid) + '">看規格書</a></p>';
+  }
+
+  function reqCollect() {
+    const s = reqState;
+    const box = document.getElementById("req-form");
+    if (box) collectFields(box, stepFields(s.step), "rq-", s.data, s.bad);
+  }
+
+  function firstErrorStep(errors) {
+    const f = REQ_FIELDS.find(x => errors[x.key]);
+    return f ? f.step : null;
+  }
+
+  function reqGoto(step) {
+    const s = reqState;
+    s.step = Math.max(1, Math.min(STEPS.length, step));
+    s.maxVisited = Math.max(s.maxVisited, s.step);
+    drawRequirement();
+    const first = document.querySelector("#req-form .has-error input, #req-form .has-error textarea");
+    if (first) first.focus();
+  }
+
+  // 錯誤只留「格式／範圍」的（暫存用）；requireAll 時連必填一起
+  function reqValidate(requireAll) {
+    const s = reqState;
+    const r = validateRequirement(s.data, requireAll);
+    return withBadInputs(r.errors, s.bad);
+  }
+
+  async function reqSave(quiet) {
+    const s = reqState;
+    reqCollect();
+    const errors = reqValidate(false);
+    s.errors = errors;
+    if (Object.keys(errors).length) {
+      s.message = "有欄位格式不正確，請先修正標示的欄位再暫存。";
+      s.messageKind = "err";
+      reqGoto(firstErrorStep(errors) || s.step);
+      return false;
+    }
+    s.busy = true;
+    drawRequirement();
+    try {
+      const res = await call("PUT", "/api/projects/" + s.pid + "/requirements", { data: s.data });
+      if (reqState !== s) return false;
+      s.savedAt = res.draft.updated_at;
+      s.savedBy = res.draft.updated_by;
+      s.errors = {};
+      if (!quiet) {
+        const miss = (res.missing || []).length;
+        s.message = (demoMode ? "已暫存（示範模式：只存在記憶體）。" : "已暫存。") +
+          (miss ? "還有 " + miss + " 個必填欄位沒填。" : "必填欄位都填好了。");
+        s.messageKind = "ok";
+      }
+      return true;
+    } catch (e) {
+      if (reqState !== s) return false;
+      s.errors = e.fields || {};
+      s.message = e.message;
+      s.messageKind = "err";
+      const st = firstErrorStep(s.errors);
+      if (st) s.step = st;
+      return false;
+    } finally {
+      if (reqState === s) {
+        s.busy = false;
+        drawRequirement();
+      }
+    }
+  }
+
+  async function reqGenerate() {
+    const s = reqState;
+    reqCollect();
+    const errors = reqValidate(true);
+    s.errors = errors;
+    if (Object.keys(errors).length) {
+      s.message = "還有 " + Object.keys(errors).length + " 個欄位沒填或不正確，已帶你到第一個有問題的步驟。";
+      s.messageKind = "err";
+      reqGoto(firstErrorStep(errors) || s.step);
+      return;
+    }
+    const ok = await reqSave(true);
+    if (!ok || reqState !== s) return;
+    s.busy = true;
+    drawRequirement();
+    try {
+      const res = await call("POST", "/api/projects/" + s.pid + "/spec/generate", {});
+      if (reqState !== s) return;
+      flash = "已由需求產生規格書 v" + res.spec.version + "。";
+      location.hash = "#spec/" + s.pid;
+    } catch (e) {
+      if (reqState !== s) return;
+      s.busy = false;
+      s.errors = e.fields || {};
+      s.message = e.message;
+      s.messageKind = "err";
+      const st = firstErrorStep(s.errors);
+      if (st) s.step = st;
+      drawRequirement();
+    }
+  }
+
+  function onRequirementClick(action, btn) {
+    const s = reqState;
+    if (!s || s.busy) return;
+    if (action === "req-goto") {
+      reqCollect();
+      s.message = "";
+      reqGoto(Number(btn.getAttribute("data-step")));
+    } else if (action === "req-prev") {
+      reqCollect();
+      s.message = "";
+      reqGoto(s.step - 1);
+    } else if (action === "req-next") {
+      reqCollect();
+      // 下一步前檢查這一步：必填與範圍
+      const all = reqValidate(true);
+      const stepErr = {};
+      stepFields(s.step).forEach(f => { if (all[f.key]) stepErr[f.key] = all[f.key]; });
+      // 其他步驟只保留原本的格式錯誤
+      const loose = reqValidate(false);
+      s.errors = Object.assign({}, loose, stepErr);
+      if (Object.keys(stepErr).length) {
+        s.message = "這一步還有欄位沒填或不正確。";
+        s.messageKind = "err";
+        reqGoto(s.step);
+        return;
+      }
+      s.message = "";
+      reqGoto(s.step + 1);
+    } else if (action === "req-save") {
+      reqSave(false);
+    } else if (action === "req-generate") {
+      reqGenerate();
+    }
+  }
+
+  // ======================================================================
+  // 畫面 4：規格書（預覽、編輯存新版、版本紀錄、意見、匯出 PDF）
+  // ======================================================================
+  let specState = null;
+
+  async function renderSpec(main, pidText) {
+    if (!pidText) return renderProjectPicker(main, "spec", "規格書");
+    const pid = Number(pidText);
+    main.innerHTML = '<h2>規格書</h2><div class="card"><p class="muted">讀取中…</p></div>';
+    const seq = routeSeq;
+    try {
+      const st = await loadSpecState(pid);
+      if (seq !== routeSeq) return;
+      specState = st;
+      drawSpec();
+    } catch (e) {
+      if (seq !== routeSeq) return;
+      main.innerHTML = '<h2>規格書</h2><div class="card"><p class="error">' + esc(e.message) + "</p>" +
+        '<p><a class="btn" href="#projects">回專案列表</a></p></div>';
+    }
+  }
+
+  async function loadSpecState(pid, viewVersion) {
+    const base = "/api/projects/" + pid;
+    const [p, latest, vers, cms] = await Promise.all([
+      call("GET", base),
+      call("GET", base + "/spec"),
+      call("GET", base + "/spec/versions"),
+      call("GET", base + "/comments")
+    ]);
+    let viewed = latest.spec;
+    if (viewVersion && latest.spec && viewVersion !== latest.spec.version) {
+      viewed = (await call("GET", base + "/spec/versions/" + viewVersion)).spec;
+    }
+    return {
+      pid, project: p.project, latest: latest.spec, viewed,
+      versions: vers.versions || [], comments: cms.comments || [],
+      editing: false, editData: null, editErrors: {}, editBad: new Set(),
+      commentErrors: {}, commentDraft: { type: "customer_request", field_key: "", content: "" },
+      message: "", messageKind: "", busy: false
+    };
+  }
+
+  function displayValue(f, v) {
+    if (isEmptyValue(f, v)) return '<span class="muted">（未填）</span>';
+    if (f.type === "multi") return esc(v.join("、"));
+    if (f.type === "longtext") return '<div class="pre">' + esc(v) + "</div>";
+    return esc(v);
+  }
+
+  function specDocHtml(s) {
+    const sp = s.viewed;
+    const today = new Date().toLocaleDateString("zh-TW");
+    return '<article class="spec-doc" id="spec-doc">' +
+      '<div class="print-header">' +
+        "<span>專案：" + esc(s.project.name) + "</span>" +
+        "<span>規格書版本：v" + esc(sp.version) + "</span>" +
+        "<span>版本日期：" + esc(fmtDate(sp.created_at)) + "</span>" +
+        "<span>列印日期：" + esc(today) + "</span>" +
+        (demoMode ? "<span>（示範資料，未存檔）</span>" : "") +
+      "</div>" +
+      '<h2 class="doc-title">遊艇需求規格書</h2>' +
+      STEPS.map(st =>
+        "<section><h3>" + st.step + ". " + esc(st.title) + "</h3><table><tbody>" +
+        stepFields(st.step).map(f => "<tr><th scope=\"row\">" + esc(f.label) + "</th><td>" + displayValue(f, sp.data[f.key]) + "</td></tr>").join("") +
+        "</tbody></table></section>"
+      ).join("") +
+      "</article>";
+  }
+
+  function specEditHtml(s) {
+    const formErr = s.editErrors._form ? '<p class="error">' + esc(s.editErrors._form) + "</p>" : "";
+    return '<div class="spec-doc" id="spec-edit">' +
+      "<h3>編輯規格書（以 v" + esc(s.viewed.version) + " 為底稿）</h3>" +
+      '<p class="muted">儲存後會產生新版本，舊版本保留不變。</p>' + formErr +
+      STEPS.map(st =>
+        '<section><h3>' + st.step + ". " + esc(st.title) + "</h3>" +
+        stepFields(st.step).map(f => fieldHtml(f, s.editData[f.key], s.editErrors[f.key], "ed-")).join("") +
+        "</section>"
+      ).join("") +
+      '<div class="btn-row"><button type="button" class="btn btn-primary" data-action="spec-save"' + (s.busy ? " disabled" : "") + ">儲存成新版本</button>" +
+      '<button type="button" class="btn" data-action="spec-cancel"' + (s.busy ? " disabled" : "") + ">取消</button></div>" +
+      "</div>";
+  }
+
+  function versionsHtml(s) {
+    const latestV = s.latest ? s.latest.version : null;
+    return '<div class="card"><h3>版本紀錄</h3>' +
+      (s.versions.length === 0 ? '<p class="muted">還沒有版本。</p>' :
+      '<ul class="side-list">' + s.versions.map(v => {
+        const isViewed = s.viewed && v.version === s.viewed.version;
+        return '<li' + (isViewed ? ' class="current"' : "") + ">" +
+          '<strong>v' + esc(v.version) + "</strong>" + (v.version === latestV ? "（最新）" : "") +
+          (isViewed ? "（檢視中）" : "") + "<br>" +
+          esc(v.note || "") + '<div class="meta">' + esc(v.created_by_name || v.created_by) + " · " + esc(fmtTime(v.created_at)) + "</div>" +
+          (s.editing ? "" : '<div class="btn-row">' +
+            (isViewed ? "" : '<button type="button" class="btn btn-small" data-action="spec-view" data-v="' + esc(v.version) + '">檢視</button>') +
+            (v.version === latestV ? "" : '<button type="button" class="btn btn-small" data-action="spec-restore" data-v="' + esc(v.version) + '"' + (s.busy ? " disabled" : "") + ">還原</button>") +
+          "</div>") + "</li>";
+      }).join("") + "</ul>") +
+      (s.editing ? '<p class="muted">編輯中：儲存或取消後才能檢視、還原其他版本。</p>' : "") +
+      "</div>";
+  }
+
+  function commentsHtml(s) {
+    const list = s.comments.slice().reverse();
+    const items = list.length === 0 ? '<p class="muted">還沒有意見。</p>' :
+      '<ul class="side-list">' + list.map(c => {
+        const f = c.field_key ? FIELD_BY_KEY[c.field_key] : null;
+        return "<li>" +
+          '<span class="badge ' + esc(COMMENT_TYPES.includes(c.type) ? c.type : "") + '">' + esc(COMMENT_TYPE_NAMES[c.type] || c.type) + "</span> " +
+          '<span class="badge ver">v' + esc(c.spec_version) + "</span> " +
+          '<span class="meta">' + esc(f ? "欄位：" + f.label : "整份規格書") + "</span>" +
+          '<div class="pre">' + esc(c.content) + "</div>" +
+          '<div class="meta">' + esc(c.author_name || c.author_email) + " · " + esc(fmtTime(c.created_at)) + "</div>" +
+          "</li>";
+      }).join("") + "</ul>";
+
+    let form = "";
+    if (canAddComment(me, s.project) && s.viewed && s.editing) {
+      form = '<p class="muted comment-form">編輯中：儲存或取消後才能新增意見。</p>';
+    } else if (canAddComment(me, s.project) && s.viewed) {
+      const d = s.commentDraft;
+      const e = s.commentErrors;
+      const err = k => '<p class="field-error">' + esc(e[k] || "") + "</p>";
+      form = '<div class="comment-form" id="comment-form"><h3>新增意見（針對 v' + esc(s.viewed.version) + "）</h3>" +
+        '<fieldset class="field' + (e.type ? " has-error" : "") + '"><legend>類型<span class="req">必填</span></legend><div class="choices">' +
+          COMMENT_TYPES.map(t => '<label class="choice"><input type="radio" name="cm-type" value="' + esc(t) + '"' + (d.type === t ? " checked" : "") + "><span>" + esc(COMMENT_TYPE_NAMES[t]) + "</span></label>").join("") +
+        "</div>" + err("type") + "</fieldset>" +
+        '<div class="field' + (e.field_key ? " has-error" : "") + '"><label class="field-label" for="cm-field">針對欄位<span class="opt">選填</span></label>' +
+          '<select id="cm-field"><option value="">整份規格書</option>' +
+          REQ_FIELDS.map(f => '<option value="' + esc(f.key) + '"' + (d.field_key === f.key ? " selected" : "") + ">" + esc(f.label) + "</option>").join("") +
+          "</select>" + err("field_key") + "</div>" +
+        '<div class="field' + (e.content ? " has-error" : "") + '"><label class="field-label" for="cm-content">內容<span class="req">必填</span></label>' +
+          '<textarea id="cm-content" maxlength="' + COMMENT_MAX + '">' + esc(d.content) + "</textarea>" + err("content") + err("spec_version") + "</div>" +
+        '<button type="button" class="btn btn-primary" data-action="comment-submit"' + (s.busy ? " disabled" : "") + ">送出意見</button>" +
+        "</div>";
+    }
+    return '<div class="card"><h3>意見</h3>' + items + form + "</div>";
+  }
+
+  function drawSpec() {
+    const s = specState;
+    const main = document.getElementById("main");
+    const msg = s.message ? '<div class="notice ' + esc(s.messageKind) + '" role="status">' + esc(s.message) + "</div>" : "";
+    const title = '<h2 class="no-print">規格書：' + esc(s.project.name) + "</h2>";
+
+    if (!s.latest) {
+      main.innerHTML = title + demoNotice() + takeFlash() + msg +
+        '<div class="card"><p>這個專案還沒有規格書。請先到「需求填寫」把必填欄位填完，再按「產生規格書」。</p>' +
+        '<p class="btn-row"><a class="btn btn-primary" href="#requirement/' + esc(s.pid) + '">去填寫需求</a>' +
+        '<a class="btn" href="#projects">回專案列表</a></p></div>';
+      return;
+    }
+
+    const isOld = s.viewed.version !== s.latest.version;
+    const oldNotice = isOld && !s.editing
+      ? '<div class="notice">你正在看舊版本 v' + esc(s.viewed.version) + "（最新是 v" + esc(s.latest.version) + "）。" +
+        '<div class="btn-row" style="margin-top:8px"><button type="button" class="btn btn-small" data-action="spec-view" data-v="' + esc(s.latest.version) + '">回到最新版</button>' +
+        '<button type="button" class="btn btn-small" data-action="spec-restore" data-v="' + esc(s.viewed.version) + '"' + (s.busy ? " disabled" : "") + ">還原這一版</button></div></div>"
+      : "";
+
+    const toolbar = s.editing ? "" :
+      '<div class="btn-row spec-toolbar" style="margin-bottom:16px">' +
+        '<button type="button" class="btn btn-primary" data-action="spec-edit"' + (s.busy ? " disabled" : "") + ">編輯</button>" +
+        '<button type="button" class="btn" data-action="spec-print">匯出 PDF</button>' +
+        '<span class="spacer"></span>' +
+        '<a class="btn" href="#requirement/' + esc(s.pid) + '">需求填寫</a>' +
+      "</div>";
+
+    main.innerHTML = title + demoNotice() + takeFlash() + msg +
+      '<div class="spec-layout">' +
+        '<section class="spec-main">' + toolbar + oldNotice + (s.editing ? specEditHtml(s) : specDocHtml(s)) + "</section>" +
+        '<aside class="spec-side">' + versionsHtml(s) + commentsHtml(s) + "</aside>" +
+      "</div>";
+  }
+
+  async function specReload(viewVersion, message, kind) {
+    const s = specState;
+    try {
+      const st = await loadSpecState(s.pid, viewVersion);
+      if (specState !== s) return;
+      st.message = message || "";
+      st.messageKind = kind || "";
+      specState = st;
+    } catch (e) {
+      if (specState !== s) return;
+      s.busy = false;
+      s.message = e.message;
+      s.messageKind = "err";
+    }
+    drawSpec();
+  }
+
+  function specCollectEdit() {
+    const s = specState;
+    const box = document.getElementById("spec-edit");
+    if (box) collectFields(box, REQ_FIELDS, "ed-", s.editData, s.editBad);
+  }
+
+  function commentCollect() {
+    const s = specState;
+    const box = document.getElementById("comment-form");
+    if (!box) return;
+    const t = box.querySelector('input[name="cm-type"]:checked');
+    s.commentDraft = {
+      type: t ? t.value : "",
+      field_key: document.getElementById("cm-field").value,
+      content: document.getElementById("cm-content").value
+    };
+  }
+
+  async function onSpecClick(action, btn) {
+    const s = specState;
+    if (!s || s.busy) return;
+    if (action === "spec-print") {
+      window.print();
+    } else if (action === "spec-edit") {
+      commentCollect();
+      s.editing = true;
+      s.editData = clone(s.viewed.data) || {};
+      s.editErrors = {};
+      s.editBad = new Set();
+      s.message = "";
+      drawSpec();
+    } else if (action === "spec-cancel") {
+      s.editing = false;
+      s.message = "";
+      drawSpec();
+    } else if (action === "spec-save") {
+      specCollectEdit();
+      const r = validateRequirement(s.editData, true);
+      const errors = withBadInputs(r.errors, s.editBad);
+      s.editErrors = errors;
+      if (Object.keys(errors).length) {
+        s.message = "還有 " + Object.keys(errors).length + " 個欄位沒填或不正確。";
+        s.messageKind = "err";
+        drawSpec();
+        const first = document.querySelector("#spec-edit .has-error input, #spec-edit .has-error textarea");
+        if (first) first.focus();
+        return;
+      }
+      s.busy = true;
+      drawSpec();
+      try {
+        const res = await call("POST", "/api/projects/" + s.pid + "/spec", { data: s.editData });
+        if (specState !== s) return;
+        await specReload(null, "已儲存成新版本 v" + res.spec.version + "。" + (demoMode ? "（示範模式：只存在記憶體）" : ""), "ok");
+      } catch (e) {
+        if (specState !== s) return;
+        s.busy = false;
+        s.editErrors = e.fields || {};
+        s.message = e.message;
+        s.messageKind = "err";
+        drawSpec();
+      }
+    } else if (action === "spec-view") {
+      commentCollect();
+      const v = Number(btn.getAttribute("data-v"));
+      s.busy = true;
+      try {
+        const res = await call("GET", "/api/projects/" + s.pid + "/spec/versions/" + v);
+        if (specState !== s) return;
+        s.viewed = res.spec;
+        s.message = "";
+        s.commentErrors = {};
+      } catch (e) {
+        if (specState !== s) return;
+        s.message = e.message;
+        s.messageKind = "err";
+      }
+      s.busy = false;
+      drawSpec();
+    } else if (action === "spec-restore") {
+      const v = Number(btn.getAttribute("data-v"));
+      if (!window.confirm("要把 v" + v + " 的內容複製成一個新版本嗎？\n舊版本都會保留，不會被刪除。")) return;
+      s.busy = true;
+      drawSpec();
+      try {
+        const res = await call("POST", "/api/projects/" + s.pid + "/spec/restore/" + v, {});
+        if (specState !== s) return;
+        await specReload(null, "已把 v" + v + " 還原成新版本 v" + res.spec.version + "。", "ok");
+      } catch (e) {
+        if (specState !== s) return;
+        s.busy = false;
+        s.message = e.message;
+        s.messageKind = "err";
+        drawSpec();
+      }
+    } else if (action === "comment-submit") {
+      commentCollect();
+      const d = s.commentDraft;
+      const errors = {};
+      if (!COMMENT_TYPES.includes(d.type)) errors.type = "請選擇類型。";
+      if (!d.content.trim()) errors.content = "請填寫意見內容。";
+      else if (d.content.trim().length > COMMENT_MAX) errors.content = "意見最多 " + COMMENT_MAX + " 個字。";
+      s.commentErrors = errors;
+      if (Object.keys(errors).length) { drawSpec(); return; }
+      s.busy = true;
+      drawSpec();
+      try {
+        const res = await call("POST", "/api/projects/" + s.pid + "/comments", {
+          spec_version: s.viewed.version,
+          field_key: d.field_key || null,
+          type: d.type,
+          content: d.content
+        });
+        if (specState !== s) return;
+        s.comments.push(res.comment);
+        s.commentDraft = { type: d.type, field_key: "", content: "" };
+        s.commentErrors = {};
+        s.message = "已新增意見。" + (demoMode ? "（示範模式：只存在記憶體）" : "");
+        s.messageKind = "ok";
+      } catch (e) {
+        if (specState !== s) return;
+        s.commentErrors = e.fields || {};
+        s.message = e.message;
+        s.messageKind = "err";
+      }
+      s.busy = false;
+      drawSpec();
+    }
+  }
+
+  // ---- 畫面上的按鈕與輸入：用一個監聽器統一處理（畫面重畫也不用重新綁） ----
+  document.getElementById("main").addEventListener("click", (ev) => {
+    const btn = ev.target.closest("[data-action]");
+    if (!btn || btn.disabled) return;
+    const action = btn.getAttribute("data-action");
+    if (action.startsWith("req-")) onRequirementClick(action, btn);
+    else onSpecClick(action, btn);
+  });
+
+  // 打字／選擇後，立刻提示該欄位的格式與範圍
+  document.getElementById("main").addEventListener("change", (ev) => {
+    const key = ev.target.getAttribute && ev.target.getAttribute("data-key");
+    if (!key || !FIELD_BY_KEY[key]) return;
+    if (reqState && document.getElementById("req-form") && document.getElementById("req-form").contains(ev.target)) {
+      collectFields(document.getElementById("req-form"), [FIELD_BY_KEY[key]], "rq-", reqState.data, reqState.bad);
+      const msg = liveCheck("rq-", reqState.data, reqState.bad, key);
+      if (msg) reqState.errors[key] = msg; else delete reqState.errors[key];
+    } else if (specState && specState.editing && document.getElementById("spec-edit") && document.getElementById("spec-edit").contains(ev.target)) {
+      collectFields(document.getElementById("spec-edit"), [FIELD_BY_KEY[key]], "ed-", specState.editData, specState.editBad);
+      const msg = liveCheck("ed-", specState.editData, specState.editBad, key);
+      if (msg) specState.editErrors[key] = msg; else delete specState.editErrors[key];
+    }
+  });
 
   function renderTodo(main, page) {
     main.innerHTML = "<h2>" + esc(page.title) + '</h2><div class="card"><p class="todo">下一步會做</p></div>';
   }
 
   function route() {
+    routeSeq++;
+    reqState = null;
+    specState = null;
     const main = document.getElementById("main");
     const pages = visiblePages();
-    let id = (location.hash || "#projects").slice(1);
+    const hash = (location.hash || "#projects").slice(1);
+    const parts = hash.split("/");
+    const id = parts[0];
+    let param = parts[1] || "";
+    if (param && !/^\d{1,12}$/.test(param)) param = "";
     let page = pages.find(p => p.id === id);
     if (!page) {
       // 沒有權限或不存在的頁面：回到專案列表
       page = pages[0];
+      param = "";
       if (location.hash && location.hash !== "#" + page.id) {
         history.replaceState(null, "", "#" + page.id);
       }
     }
     renderNav(page.id);
     if (page.id === "projects") renderProjects(main);
+    else if (page.id === "requirement") renderRequirement(main, param);
+    else if (page.id === "spec") renderSpec(main, param);
     else renderTodo(main, page);
   }
 
@@ -307,7 +1519,7 @@
     demoMode = true;
     document.getElementById("dev-bar").style.display = "none";
     document.getElementById("demo-bar").style.display = "block";
-    document.getElementById("demo-note").textContent = reason;
+    document.getElementById("demo-note").textContent = reason + "（需求、規格書、意見都只放在記憶體，重新整理就消失。）";
     const sel = document.getElementById("demo-role");
     sel.value = DEMO_USERS[0].email;
     me = DEMO_USERS[0];
