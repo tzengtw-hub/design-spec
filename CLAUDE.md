@@ -38,25 +38,30 @@
 
 ## 網站的限制（讓它保持簡單）
 
-- 整個網站只有一個檔案 `index.html`，CSS 和 JavaScript 都寫在裡面。
-- 不用後端、不用登入、不用資料庫、不用安裝套件；資料用假資料，或存在瀏覽器裡。
-- 不放任何真實的客戶資料、報價、圖面。
-- 手機優先：字要大、按鈕要好按。
+> 2026-10-27 起依 ADR-0001、ADR-0002 調整：這個專案是正式系統，不再限制只有一個檔案。
+
+- 前端：`index.html`（可以再拆成多個前端檔案，但不用前端框架、不用打包工具）。
+- 後端：Cloudflare Workers；資料庫：Cloudflare D1；登入：Cloudflare Access（見 ADR-0002）。
+- 權限：每個讀寫資料的地方都要檢查角色（客戶／船廠人員／管理者），客戶只能看自己的專案。
+- 動到登入、權限或資料表結構的變更，合併前先問使用者。
+- 金鑰只放環境設定，不貼進對話、不提交。
+- 不放任何真實的客戶資料、報價、圖面；測試只用假資料。
+- 桌機、平板優先（見 SDD-001）：字要清楚、按鈕要好按。
 
 ## 怎麼讓使用者看到網站
 
-- **草稿預覽**：使用者說「給我看網站」、或功能驗收通過時：把 `index.html` 用成品頁（Artifact）發佈成預覽頁，給使用者連結。第一次發佈後，之後都更新同一個網址。
+- **草稿預覽**：使用者說「給我看網站」、或功能驗收通過時：把 `public/index.html` 用成品頁（Artifact）發佈成預覽頁，給使用者連結。預覽沒有後端，會自動進入「示範模式」（假資料、不存檔）。第一次發佈後，之後都更新同一個網址。
 - 課堂上**不教上線（deploy）**：預覽一律用成品頁（Artifact）。使用者問怎麼放上正式網址，給他 `docs/deploy.md`（課後小抄），不要在課堂上帶他設定。
 - 網站只放假資料。
 
 ## 上線（選用，課後才用）
 
-範本已內建 Wrangler（Cloudflare 的命令列部署工具）：`wrangler.jsonc`、`package.json`、`.assetsignore`（只上傳 `index.html`）。使用者說「上線」時：
+範本已內建 Wrangler（Cloudflare 的命令列部署工具）：`wrangler.jsonc`（後端 `src/worker.js`，前端上傳 `public/`）、`package.json`。D1、Access 的設定步驟見 `docs/dev.md`。使用者說「上線」時：
 
 1. 只檢查金鑰在不在，**絕不印出值**：`test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID" && echo ok`。不在就請他照 `docs/deploy.md` 設定環境，**絕對不要請他把金鑰貼進對話**，也不要建立或提交 `.env`。
 2. `docs/features/` 有情境的話，驗收要先全部通過。
-3. 執行 `npm install`，再執行 `npx wrangler deploy --name <repo 名稱，小寫英文和減號>`。名稱用指令參數給，不要改 `wrangler.jsonc`。
-4. 從輸出找出 `https://….workers.dev` 網址給他；第一次上線可能要等一兩分鐘網址才打得開。
+3. 確認 `docs/dev.md` 的 D1 與 Access 設定已完成（`wrangler.jsonc` 裡沒有 `REPLACE` 佔位值）；動到登入、權限或資料表結構的版本，上線前先問使用者。再執行 `npm install`、`npx wrangler deploy`。
+4. 已關閉 workers.dev 網址（避免繞過登入），網站只走在 Cloudflare 設定、受 Access 保護的自訂網域；第一次上線可能要等一兩分鐘才打得開。
 5. 出現 fetch failed 或連不到 `api.cloudflare.com`：環境的網路沒開，請他看 `docs/deploy.md` 第 5 步。
 
 ## 收工

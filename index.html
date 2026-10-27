@@ -3,14 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>我的第一個網站</title>
+<title>遊艇訂製網站（說明）</title>
 <style>
-  body { font-family: system-ui, "Noto Sans TC", sans-serif; margin: 0; padding: 24px 16px; font-size: 18px; line-height: 1.6; }
+  body { font-family: system-ui, "Noto Sans TC", sans-serif; margin: 0; padding: 32px 24px; font-size: 18px; line-height: 1.7; max-width: 760px; }
   h1 { font-size: 28px; }
+  code { background: #eef2f6; padding: 2px 6px; border-radius: 4px; }
+  a.btn { display: inline-block; margin-top: 8px; padding: 12px 20px; background: #12355b; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
 </style>
 </head>
 <body>
-  <h1>我的第一個網站</h1>
-  <p>這裡還是空的。跟 Claude 說說你想做什麼吧。</p>
+  <h1>網站已經搬家</h1>
+  <p>遊艇訂製網站的畫面現在放在 <code>public/index.html</code>，後端程式在 <code>src/worker.js</code>。</p>
+  <p>這個根目錄的 <code>index.html</code> 只是說明頁，<strong>不會上線</strong>（上線只上傳 <code>public/</code> 資料夾）。</p>
+  <p>真正的畫面要搭配後端一起跑才看得到資料，怎麼在本機試請看 <code>docs/dev.md</code>。</p>
+  <a class="btn" href="public/index.html">打開 public/index.html</a>
 </body>
 </html>

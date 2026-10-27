@@ -1,8 +1,47 @@
-// 上線設定（選用，課堂不用）。照 docs/deploy.md 的小抄做完，跟 Claude 說「上線」。
+// 上線設定（選用，課堂不用）。本機開發與資料庫設定請看 docs/dev.md。
 {
-  // 網站名稱：只能用小寫英文、數字、減號。網址會是 https://<名稱>.<你的子網域>.workers.dev
-  "name": "my-site",
+  // Worker 名稱：只能用小寫英文、數字、減號。
+  "name": "yacht-order",
   "compatibility_date": "2026-10-01",
-  // 只上傳 index.html：其他檔案在 .assetsignore 排除
-  "assets": { "directory": "." }
+
+  // 關掉 workers.dev 網址和預覽網址：這兩種網址可能不在 Cloudflare Access 保護之下。
+  // 正式網址請用自己的網域（Custom Domain），並在 Access 保護整個網域。
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // 後端程式（Cloudflare Worker）。純 JavaScript，不用打包工具。
+  "main": "src/worker.js",
+
+  // 前端靜態檔：只上傳 public/ 這個資料夾。
+  // /api/* 先交給 Worker 處理（要檢查登入和權限），其他路徑直接回 public/ 的檔案。
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // 資料庫（Cloudflare D1）。程式裡用 env.DB 存取。
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "yacht-order",
+      // 這是佔位字串，不是真的 ID。
+      // 建好資料庫（npx wrangler d1 create yacht-order）後，把它印出的 database_id 貼來這裡。
+      // database_id 不是密碼，可以提交；但 API 金鑰（CLOUDFLARE_API_TOKEN）絕對不要寫在這裡。
+      "database_id": "REPLACE_WITH_D1_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // 登入驗證用的設定（見 docs/dev.md 第 5 節）。
+  // 這兩個都「不是金鑰、不是密碼」：團隊網域和 AUD 標籤是公開的識別碼，可以提交。
+  // 下面是佔位字串，還沒換成真的值之前，正式模式的 API 一律回 403（不會放行）。
+  "vars": {
+    // Access 團隊網域，例如 "your-team.cloudflareaccess.com"（不要加 https://）
+    "ACCESS_TEAM_DOMAIN": "REPLACE_ME.cloudflareaccess.com",
+    // Access 應用程式的 Application Audience (AUD) Tag
+    "ACCESS_AUD": "REPLACE_WITH_ACCESS_AUD"
+  }
+
+  // 注意：DEV_AUTH 不可以寫在這個檔案的 vars 裡。它只能放在本機的 .dev.vars（已在 .gitignore 排除）。
 }
