@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>遊艇訂製網站</title>
+<style>
+  :root {
+    --navy: #12355b;
+    --navy-light: #e8eef5;
+    --line: #cfd8e3;
+    --text: #1d2733;
+    --muted: #5b6b7d;
+    --danger: #a12626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--text);
+    background: #f6f8fb;
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  header h1 { font-size: 24px; margin: 0; }
+  #who { font-size: 17px; }
+  #who .role {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 12px;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--navy);
+    font-weight: 600;
+  }
+  nav {
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    padding: 8px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    color: var(--navy);
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  nav a:hover { background: var(--navy-light); }
+  nav a.active { background: var(--navy); color: #fff; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  h2 { font-size: 26px; margin: 0 0 16px; }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 18px; }
+  th, td { text-align: left; padding: 14px 12px; border-bottom: 1px solid var(--line); }
+  th { background: var(--navy-light); color: var(--navy); }
+  .muted { color: var(--muted); }
+  .error { color: var(--danger); font-weight: 600; }
+  .todo {
+    font-size: 22px;
+    color: var(--muted);
+    text-align: center;
+    padding: 48px 16px;
+  }
+  #dev-bar {
+    display: none;
+    background: #fff4d6;
+    border-bottom: 1px solid #e6c97a;
+    padding: 10px 24px;
+    font-size: 16px;
+  }
+  #dev-bar select, #dev-bar button {
+    font-size: 16px;
+    min-height: 40px;
+    padding: 4px 12px;
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>遊艇訂製網站</h1>
+    <div id="who">讀取登入資訊中…</div>
+  </header>
+
+  <!-- 只在本機（localhost）顯示：選假帳號來試。正式環境不會出現，後端也只在 DEV_AUTH="1" 時才認。 -->
+  <div id="dev-bar">
+    本機開發模式：以
+    <select id="dev-user">
+      <option value="">（不指定）</option>
+      <option value="customer1@example.com">示範客戶一 customer1@example.com</option>
+      <option value="customer2@example.com">示範客戶二 customer2@example.com</option>
+      <option value="staff1@example.com">示範船廠人員 staff1@example.com</option>
+      <option value="admin1@example.com">示範管理者 admin1@example.com</option>
+    </select>
+    身分試用
+    <button type="button" id="dev-apply">套用</button>
+  </div>
+
+  <nav id="nav"></nav>
+
+  <main id="main">
+    <p class="muted">載入中…</p>
+  </main>
+
+<script>
+  // 頁面清單：roles 寫誰看得到這個選項（這只是畫面，真正的權限在後端檢查）
+  const PAGES = [
+    { id: "projects",    title: "專案列表", roles: ["customer", "staff", "admin"] },
+    { id: "requirement", title: "需求填寫", roles: ["customer", "staff", "admin"] },
+    { id: "spec",        title: "規格書",   roles: ["customer", "staff", "admin"] },
+    { id: "rule-search", title: "法規查詢", roles: ["staff", "admin"] },
+    { id: "rule-match",  title: "法規對照", roles: ["staff", "admin"] },
+    { id: "drawing",     title: "圖面審查", roles: ["staff", "admin"] },
+    { id: "rule-admin",  title: "法規維護", roles: ["admin"] }
+  ];
+
+  const ROLE_NAMES = { customer: "客戶", staff: "船廠人員", admin: "管理者" };
+
+  let me = null;
+
+  // ---- 本機開發用：localhost 才顯示假帳號選單 ----
+  const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
+  if (isLocal) {
+    document.getElementById("dev-bar").style.display = "block";
+    const sel = document.getElementById("dev-user");
+    sel.value = localStorage.getItem("devUser") || "";
+    document.getElementById("dev-apply").addEventListener("click", () => {
+      localStorage.setItem("devUser", sel.value);
+      location.reload();
+    });
+  }
+
+  async function api(path) {
+    const headers = {};
+    const devUser = isLocal ? localStorage.getItem("devUser") : "";
+    if (devUser) headers["X-Dev-User"] = devUser;
+    let res;
+    try {
+      res = await fetch(path, { headers, credentials: "same-origin" });
+    } catch (e) {
+      throw new Error("連不到伺服器。");
+    }
+    let body = null;
+    try { body = await res.json(); } catch (e) { body = null; }
+    if (!res.ok) {
+      const msg = (body && body.error) || ("伺服器回應錯誤（" + res.status + "）");
+      const err = new Error(msg);
+      err.status = res.status;
+      throw err;
+    }
+    return body;
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function visiblePages() {
+    return PAGES.filter(p => me && p.roles.includes(me.role));
+  }
+
+  function renderNav(current) {
+    document.getElementById("nav").innerHTML = visiblePages().map(p =>
+      '<a href="#' + p.id + '"' + (p.id === current ? ' class="active"' : "") + ">" + esc(p.title) + "</a>"
+    ).join("");
+  }
+
+  async function renderProjects(main) {
+    main.innerHTML = '<h2>專案列表</h2><div class="card"><p class="muted">讀取中…</p></div>';
+    try {
+      const data = await api("/api/projects");
+      const rows = data.projects || [];
+      const body = rows.length === 0
+        ? '<p class="muted">目前沒有專案。</p>'
+        : "<table><thead><tr><th>專案名稱</th><th>船型</th><th>狀態</th></tr></thead><tbody>" +
+          rows.map(r => "<tr><td>" + esc(r.name) + "</td><td>" + esc(r.boat_type) + "</td><td>" + esc(r.status) + "</td></tr>").join("") +
+          "</tbody></table>";
+      main.innerHTML = '<h2>專案列表</h2><div class="card">' + body + "</div>";
+    } catch (e) {
+      main.innerHTML = '<h2>專案列表</h2><div class="card"><p class="error">' + esc(e.message) + "</p></div>";
+    }
+  }
+
+  function renderTodo(main, page) {
+    main.innerHTML = "<h2>" + esc(page.title) + '</h2><div class="card"><p class="todo">下一步會做</p></div>';
+  }
+
+  function route() {
+    const main = document.getElementById("main");
+    const pages = visiblePages();
+    let id = (location.hash || "#projects").slice(1);
+    let page = pages.find(p => p.id === id);
+    if (!page) {
+      // 沒有權限或不存在的頁面：回到專案列表
+      page = pages[0];
+      if (location.hash && location.hash !== "#" + page.id) {
+        history.replaceState(null, "", "#" + page.id);
+      }
+    }
+    renderNav(page.id);
+    if (page.id === "projects") renderProjects(main);
+    else renderTodo(main, page);
+  }
+
+  async function start() {
+    const who = document.getElementById("who");
+    const main = document.getElementById("main");
+    try {
+      me = await api("/api/me");
+      who.innerHTML = "目前登入：" + esc(me.name || me.email) +
+        '（' + esc(me.email) + '）<span class="role">' + esc(ROLE_NAMES[me.role] || me.role) + "</span>";
+      window.addEventListener("hashchange", route);
+      route();
+    } catch (e) {
+      who.textContent = "尚未登入";
+      const hint = e.status === 403
+        ? "請用船廠核發的帳號透過 Cloudflare Access 登入；若已登入仍看到這段，代表帳號還沒開通，請聯絡船廠管理者。"
+        : "連不到後端。這個畫面需要搭配 Worker 後端一起執行（見 docs/dev.md）。";
+      main.innerHTML = '<div class="card"><p class="error">' + esc(e.message) + '</p><p>' + esc(hint) + "</p></div>";
+    }
+  }
+
+  start();
+</script>
+</body>
+</html>
