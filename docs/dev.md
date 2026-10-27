@@ -10,8 +10,8 @@
 | 前端畫面 | `public/index.html` | 使用者看到的網頁 |
 | 後端程式 | `src/worker.js` | Cloudflare Worker（在 Cloudflare 上跑的小程式），負責查資料、檢查權限 |
 | 資料庫 | Cloudflare D1 | 雲端的表格式資料庫，名稱 `yacht-order` |
-| 資料表結構 | `migrations/0001_init.sql`、`migrations/0002_specs.sql` | 遷移檔（migration）：建立資料表的指令，照編號順序套用。0002 是需求暫存、規格書版本、意見 |
-| 假資料 | `seeds/seed_demo.sql` | 示範用的假帳號和假專案（@example.com）。放在 `migrations/` 外面，避免被當成遷移檔套用 |
+| 資料表結構 | `migrations/0001_init.sql`、`migrations/0002_specs.sql`、`migrations/0003_rules.sql` | 遷移檔（migration）：建立資料表的指令，照編號順序套用。0002 是需求暫存、規格書版本、意見；0003 是法規摘要與修改紀錄 |
+| 假資料 | `seeds/seed_demo.sql` | 示範用的假帳號、假專案（@example.com）和 14 筆假法規摘要（DEMO- 開頭）。放在 `migrations/` 外面，避免被當成遷移檔套用 |
 | 登入 | Cloudflare Access | Cloudflare 的登入關卡，先驗證身分才放行 |
 | 設定 | `wrangler.jsonc` | 告訴 Wrangler 後端在哪、前端在哪、資料庫是哪一個 |
 
@@ -43,10 +43,14 @@ npx wrangler d1 create yacht-order
 ```bash
 npx wrangler d1 execute yacht-order --local --file=migrations/0001_init.sql
 npx wrangler d1 execute yacht-order --local --file=migrations/0002_specs.sql
+npx wrangler d1 execute yacht-order --local --file=migrations/0003_rules.sql
 npx wrangler d1 execute yacht-order --local --file=seeds/seed_demo.sql
 ```
 
 雲端（測試環境）：把上面的 `--local` 換成 `--remote`。
+
+> 假資料一定要**最後**才灌：`seeds/seed_demo.sql` 會寫入 0003 的 `rules`、`rule_revisions`，
+> 沒先套用 0003 會出現「no such table: rules」。
 
 ### 已經建好 0001、只要補上 0002（需求表單 → 規格書）
 
@@ -63,13 +67,35 @@ npx wrangler d1 execute yacht-order --remote --file=migrations/0002_specs.sql   
 - 沒套用 0002 就打需求、規格書的 API，後端會回 500（找不到資料表）。
 - 套到**正式資料庫**之前，先問過使用者（這是資料表結構變更）。
 
+### 已經建好 0001、0002，只要補上 0003（法規查詢、對照、維護）
+
+```bash
+npx wrangler d1 execute yacht-order --local  --file=migrations/0003_rules.sql   # 本機
+npx wrangler d1 execute yacht-order --remote --file=migrations/0003_rules.sql   # 雲端測試環境
+```
+
+要法規假資料的話，再跑一次假資料（只限本機或測試環境；舊的假帳號、假專案用 `INSERT OR IGNORE`，不會重複）：
+
+```bash
+npx wrangler d1 execute yacht-order --local --file=seeds/seed_demo.sql
+```
+
+- 0003 會新增兩張表：`rules`（法規重點摘要，含條文編號、分類、適用條件、規則版本、生效日期、狀態）、
+  `rule_revisions`（修改紀錄：每次新增、編輯、發佈、停用都新增一列完整快照，不覆蓋、不刪除）。
+- 狀態有三種：`draft`（草稿）、`published`（已發佈）、`disabled`（已停用）。
+  資料表本身就規定「已發佈」一定要有條文編號、規則版本、生效日期（後端也會先擋，回 400）。
+- 0003 不會改動 0001、0002 的表，也不會刪任何資料。都是 `CREATE ... IF NOT EXISTS`，重複執行不會出錯。
+- 沒套用 0003 就打法規 API，後端會回 500（找不到資料表）。
+- 套到**正式資料庫**之前，先問過使用者（這是資料表結構變更）。
+- 假資料會多一列 `audit_log`（seed_demo），每跑一次多一列，這是正常的。
+
 檢查有沒有建好：
 
 ```bash
 npx wrangler d1 execute yacht-order --local --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
 ```
 
-應該看得到 `requirement_drafts`、`spec_comments`、`spec_versions`。
+應該看得到 `requirement_drafts`、`rule_revisions`、`rules`、`spec_comments`、`spec_versions`。
 
 > 注意：假資料 `seeds/seed_demo.sql` 已經搬出 `migrations/` 資料夾，
 > 所以 `wrangler d1 migrations apply` 只會套用資料表結構，不會順便灌假資料。
@@ -112,7 +138,34 @@ curl -H "X-Dev-User: customer1@example.com" http://localhost:8787/api/projects/1
 curl -X POST -H "X-Dev-User: customer1@example.com" -H "Content-Type: application/json" \
   -d '{"spec_version":1,"type":"yard_suggestion","content":"測試"}' \
   http://localhost:8787/api/projects/1/comments   # 客戶新增意見 → 403（只有船廠人員可以）
+
+# 法規查詢、對照（staff／admin）
+curl -H "X-Dev-User: staff1@example.com" "http://localhost:8787/api/rules?q=DEMO-STR&category=%E7%B5%90%E6%A7%8B"
+curl -H "X-Dev-User: staff1@example.com" http://localhost:8787/api/projects/1/rule-match
+curl -H "X-Dev-User: customer1@example.com" http://localhost:8787/api/rules              # 客戶 → 403
+curl -H "X-Dev-User: staff1@example.com" "http://localhost:8787/api/rules?status=draft"  # 船廠人員看草稿 → 403
+
+# 法規維護（只限 admin）
+curl -H "X-Dev-User: admin1@example.com" "http://localhost:8787/api/rules?status=all"
+curl -X POST -H "X-Dev-User: admin1@example.com" -H "Content-Type: application/json" -d '{}' \
+  http://localhost:8787/api/rules/13/publish     # 示範草稿缺規則版本、生效日期 → 400，不能發佈
+curl -X POST -H "X-Dev-User: staff1@example.com" -H "Content-Type: application/json" -d '{}' \
+  http://localhost:8787/api/rules/13/publish     # 船廠人員 → 403
+curl -H "X-Dev-User: admin1@example.com" http://localhost:8787/api/rules/1/revisions   # 修改紀錄（修改人、時間、動作、快照）
 ```
+
+法規 API 一覽：
+
+| API | 誰可以用 | 說明 |
+|---|---|---|
+| `GET /api/rules?q=&category=&status=` | staff、admin | 關鍵字比對條文編號、標題、重點說明。預設只回已發佈；`status=draft／disabled／all` 只限 admin |
+| `GET /api/rules/:id` | staff、admin | staff 只看得到已發佈的 |
+| `POST /api/rules`、`PUT /api/rules/:id` | admin | 內容放在 `{"data": {...}}`。新增一律是草稿；編輯保持原狀態 |
+| `POST /api/rules/:id/publish`、`/disable` | admin | 發佈前一定要有條文編號、規則版本、生效日期，缺一項回 400 |
+| `GET /api/rules/:id/revisions` | admin | 修改紀錄 |
+| `GET /api/projects/:id/rule-match` | staff、admin | 用最新規格書（沒有就用需求暫存）的船長、船型、航區、用途、動力，對照已發佈條文 |
+
+客戶打任何法規 API 都回 403。
 
 ### DEV_AUTH 的安全規則（很重要）
 
@@ -196,3 +249,8 @@ npx wrangler d1 execute yacht-order --remote --command "INSERT INTO users (email
 - **進入示範模式後不送任何請求**；沒帶 `?demo=1` 時，開頁會先向同一網址探一次 `/api/me`，失敗才進示範模式。示範模式不影響後端權限；它只是畫面展示。
 - 示範模式也能完整操作「需求填寫」和「規格書」：資料只放在瀏覽器分頁的記憶體，**重新整理就消失**。
   驗證規則、權限規則寫在前端，和 `src/worker.js` 的 `REQ_FIELDS`／`validateRequirement()` 一模一樣；改一邊要記得改另一邊。
+- 示範模式也能完整操作「法規查詢」「法規對照」「法規維護」（切換成船廠人員或管理者）。
+  假條文寫在前端 `DEMO_RULES`，和 `seeds/seed_demo.sql` 的 14 筆一樣；法規的驗證、權限、對照規則
+  （`RULE_*`、`normalizeConditions()`、`validateRule()`、`rulePublishMissing()`、`matchRule()` 等）和 `src/worker.js` 一模一樣，改一邊要記得改另一邊。
+- 法規對照要先有規格參數：示範模式一開始沒有需求和規格書，請先到「需求填寫」填一個專案（例如船長 45、遠洋、商業包租），
+  再到「法規對照」看。

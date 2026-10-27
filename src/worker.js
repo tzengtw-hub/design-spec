@@ -17,6 +17,12 @@
 //   GET      /api/projects/:id/spec/versions[/:v]    版本列表／某一版
 //   POST     /api/projects/:id/spec/restore/:v       舊版複製成新版
 //   GET/POST /api/projects/:id/comments              意見（新增只限 staff／admin）
+//   GET      /api/projects/:id/rule-match            法規對照（畫面 6，staff／admin）
+//   GET      /api/rules?q=&category=&status=         法規查詢（畫面 5，staff／admin；status 只限 admin）
+//   POST     /api/rules                              新增條文（草稿，admin）
+//   GET/PUT  /api/rules/:id                          看一筆（staff 只看已發佈）／編輯（admin）
+//   POST     /api/rules/:id/publish、/disable        發佈、停用（admin）
+//   GET      /api/rules/:id/revisions                修改紀錄（admin）
 // 寫入請求一律要 Content-Type: application/json、內容 64KB 以內。
 
 const ROLES = ["customer", "staff", "admin"];
@@ -723,7 +729,466 @@ async function addComment(request, user, env, project) {
   }, 201);
 }
 
-// ---------- 路由 ----------
+// ---------- 法規摘要（SDD-001 功能 2、畫面 5、6、8、驗收 4.2） ----------
+// 重要：public/index.html 有一份一模一樣的 RULE_* 常數、normalizeConditions()、validateRule()、
+//       rulePublishMissing()、matchParamsFrom()、matchRule()、matchRules()（示範模式和前端提示用）。
+//       改了這邊，記得也改那邊，兩邊規則要一致。
+// 權限：查詢、對照只限 staff／admin；維護（新增、編輯、發佈、停用、修改紀錄、看草稿與停用）只限 admin。
+// 系統只列出「可能相關」的條文，不判定合規（SDD 不做的事）。
+
+const RULE_CATEGORIES = ["結構", "穩度", "消防", "機械", "電氣"];
+const RULE_STATUSES = ["draft", "published", "disabled"];
+const RULE_TEXT_FIELDS = [
+  { key: "article_no",   label: "條文編號", required: false, maxLength: 50 },
+  { key: "title",        label: "標題",     required: true,  maxLength: 200 },
+  { key: "summary",      label: "重點說明", required: false, maxLength: 2000 },
+  { key: "rule_version", label: "規則版本", required: false, maxLength: 50 },
+];
+// 發佈前一定要有的三項（驗收 4.2 第二條）
+const RULE_PUBLISH_REQUIRED = [
+  { key: "article_no",     label: "條文編號" },
+  { key: "rule_version",   label: "規則版本" },
+  { key: "effective_date", label: "生效日期" },
+];
+// 適用條件裡的「多選」項目：key 是條件名稱，field 是需求表單欄位（選項沿用 REQ_FIELDS，與附錄 A 一致）
+const RULE_COND_LISTS = [
+  { key: "boat_types",  field: "boat_type",  label: "船型" },
+  { key: "areas",       field: "area",       label: "航區" },
+  { key: "usages",      field: "usage",      label: "用途" },
+  { key: "propulsions", field: "propulsion", label: "動力" },
+];
+const RULE_LOA_LIMIT_MIN = 0;
+const RULE_LOA_LIMIT_MAX = 200;
+const RULE_QUERY_MAX = 100;
+// 對照時從規格書拿的參數
+const MATCH_PARAM_KEYS = ["loa", "boat_type", "area", "usage", "propulsion"];
+
+function reqField(key) {
+  return REQ_FIELDS.find(f => f.key === key);
+}
+
+function isBlank(raw) {
+  return raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "");
+}
+
+// 適用條件：回 { value, errors }。value 只留有填的項目（沒填＝不限）；不認得的 key 一律丟掉。
+function normalizeConditions(raw) {
+  const errors = {};
+  const value = {};
+  if (raw === undefined || raw === null) return { value, errors };
+  if (typeof raw !== "object" || Array.isArray(raw)) return { value, errors: { conditions: "適用條件格式不正確。" } };
+
+  for (const k of ["loa_min", "loa_max"]) {
+    const r = raw[k];
+    if (isBlank(r)) continue;
+    const L = k === "loa_min" ? "「船長下限」" : "「船長上限」";
+    let n = NaN;
+    if (typeof r === "number") n = r;
+    else if (typeof r === "string" && /^-?\d+(\.\d+)?$/.test(r.trim())) n = Number(r.trim());
+    if (!Number.isFinite(n)) errors[k] = L + "必須是數字。";
+    else if (n < RULE_LOA_LIMIT_MIN || n > RULE_LOA_LIMIT_MAX) errors[k] = L + "必須介於 " + RULE_LOA_LIMIT_MIN + " 到 " + RULE_LOA_LIMIT_MAX + " 公尺。";
+    else value[k] = n;
+  }
+  if (typeof value.loa_min === "number" && typeof value.loa_max === "number" && value.loa_min > value.loa_max) {
+    errors.loa_max = "「船長上限」不能小於「船長下限」。";
+  }
+
+  for (const c of RULE_COND_LISTS) {
+    const r = raw[c.key];
+    if (r === undefined || r === null) continue;
+    const opts = reqField(c.field).options;
+    if (!Array.isArray(r) || r.some(x => typeof x !== "string" || !opts.includes(x))) {
+      errors[c.key] = "「" + c.label + "」只能選：" + opts.join("、") + "。";
+      continue;
+    }
+    const list = opts.filter(o => r.includes(o));   // 去重複、照選項順序
+    if (list.length) value[c.key] = list;
+  }
+  return { value, errors };
+}
+
+// 新增／編輯條文的驗證：回 { data, errors }。條文編號、規則版本、生效日期可以先空白（存草稿）。
+function validateRule(input) {
+  const errors = {};
+  const data = {};
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { data, errors: { _form: "條文資料格式不正確。" } };
+  }
+  for (const f of RULE_TEXT_FIELDS) {
+    const raw = input[f.key];
+    if (raw !== undefined && raw !== null && typeof raw !== "string") { errors[f.key] = "「" + f.label + "」格式不正確。"; continue; }
+    const v = typeof raw === "string" ? raw.trim() : "";
+    if (!v && f.required) { errors[f.key] = "請填寫「" + f.label + "」。"; continue; }
+    if (v.length > f.maxLength) { errors[f.key] = "「" + f.label + "」最多 " + f.maxLength + " 個字。"; continue; }
+    data[f.key] = v;
+  }
+  if (typeof input.category !== "string" || !RULE_CATEGORIES.includes(input.category)) {
+    errors.category = "請選擇分類：" + RULE_CATEGORIES.join("、") + "。";
+  } else {
+    data.category = input.category;
+  }
+  const d = input.effective_date;
+  if (isBlank(d)) data.effective_date = "";
+  else if (typeof d !== "string" || !isValidDate(d.trim())) errors.effective_date = "「生效日期」格式不正確（例如 2026-01-01）。";
+  else data.effective_date = d.trim();
+
+  const c = normalizeConditions(input.conditions);
+  Object.assign(errors, c.errors);
+  data.conditions = c.value;
+  return { data, errors };
+}
+
+// 發佈前檢查：缺哪幾項（回 { 欄位key: 中文說明 }，空物件代表可以發佈）
+function rulePublishMissing(rule) {
+  const missing = {};
+  for (const f of RULE_PUBLISH_REQUIRED) {
+    if (isBlank(rule[f.key])) missing[f.key] = "缺少「" + f.label + "」，不能發佈。";
+  }
+  return missing;
+}
+
+// 從規格書（或需求暫存）資料取出對照用的參數；格式不對的當成沒填
+function matchParamsFrom(data) {
+  const params = {};
+  for (const k of MATCH_PARAM_KEYS) {
+    const f = reqField(k);
+    const raw = data && typeof data === "object" ? data[k] : undefined;
+    if (isEmptyValue(f, raw)) { params[k] = null; continue; }
+    const r = validateField(f, raw);
+    params[k] = r.error ? null : r.value;
+  }
+  return params;
+}
+
+// 對照一筆條文：回 { status: "match" | "confirm" | "no", reasons, missing }
+// - 條件沒填的項目不影響。
+// - 規格有填、但不在條件內 → "no"（不列出）。
+// - 規格缺這個參數、條文卻需要 → 列為「需確認」，不算符合。
+function matchRule(params, cond) {
+  const c = cond && typeof cond === "object" ? cond : {};
+  const reasons = [];
+  const missing = [];
+  let fails = false;
+
+  const hasMin = typeof c.loa_min === "number";
+  const hasMax = typeof c.loa_max === "number";
+  if (hasMin || hasMax) {
+    const need = hasMin && hasMax ? "介於 " + c.loa_min + "–" + c.loa_max + " m"
+      : hasMin ? "≥ " + c.loa_min + " m" : "≤ " + c.loa_max + " m";
+    if (typeof params.loa !== "number") missing.push("規格缺船長；條文適用船長 " + need);
+    else if ((hasMin && params.loa < c.loa_min) || (hasMax && params.loa > c.loa_max)) fails = true;
+    else reasons.push("船長 " + params.loa + " m " + need);
+  }
+
+  for (const L of RULE_COND_LISTS) {
+    const list = c[L.key];
+    if (!Array.isArray(list) || list.length === 0) continue;
+    const v = params[L.field];
+    if (v === null || v === undefined || v === "") missing.push("規格缺" + L.label + "；條文適用" + L.label + "：" + list.join("、"));
+    else if (!list.includes(v)) fails = true;
+    else reasons.push(L.label + "：" + v);
+  }
+
+  if (fails) return { status: "no", reasons: [], missing: [] };
+  if (reasons.length === 0 && missing.length === 0) reasons.push("未設定適用條件（適用全部船舶）");
+  return { status: missing.length ? "confirm" : "match", reasons, missing };
+}
+
+// 對照所有條文（呼叫端只傳 published 的）
+function matchRules(params, rules) {
+  const matched = [];
+  const needsConfirm = [];
+  for (const r of rules) {
+    const m = matchRule(params, r.conditions);
+    if (m.status === "match") matched.push(Object.assign({}, r, { reasons: m.reasons, missing: [] }));
+    else if (m.status === "confirm") needsConfirm.push(Object.assign({}, r, { reasons: m.reasons, missing: m.missing }));
+  }
+  return { matched, needsConfirm };
+}
+
+function isAdmin(user) {
+  return user.role === "admin";
+}
+
+const RULE_COLS =
+  "r.id, r.article_no, r.category, r.title, r.summary, r.conditions, r.rule_version, r.effective_date, " +
+  "r.status, r.updated_by, u.name AS updated_by_name, r.updated_at";
+const RULE_FROM = "FROM rules r LEFT JOIN users u ON u.email = r.updated_by";
+const RULE_ORDER = "ORDER BY instr('結構穩度消防機械電氣', r.category), r.article_no, r.id";
+
+function ruleRow(row) {
+  return {
+    id: row.id,
+    article_no: row.article_no,
+    category: row.category,
+    title: row.title,
+    summary: row.summary,
+    conditions: parseJsonColumn(row.conditions),
+    rule_version: row.rule_version,
+    effective_date: row.effective_date,
+    status: row.status,
+    updated_by: row.updated_by,
+    updated_by_name: row.updated_by_name || null,
+    updated_at: row.updated_at,
+  };
+}
+
+async function loadRule(env, id) {
+  const row = await env.DB.prepare(`SELECT ${RULE_COLS} ${RULE_FROM} WHERE r.id = ?1`).bind(id).first();
+  return row ? ruleRow(row) : null;
+}
+
+// 每次寫入：把「寫入後」的整筆條文存成新的一列快照（版本號 = 該條文目前最大 + 1）
+// ruleIdSql 是固定的 SQL 片段（"?1" 或 "COALESCE(?1, (SELECT last_insert_rowid()))"），不放使用者輸入
+function revisionStmt(env, ruleIdSql, binds) {
+  return env.DB.prepare(
+    "INSERT INTO rule_revisions (rule_id, revision, action, snapshot, changed_by) " +
+    "SELECT r.id, COALESCE((SELECT MAX(v.revision) FROM rule_revisions v WHERE v.rule_id = r.id), 0) + 1, ?2, " +
+    "json_object('id', r.id, 'article_no', r.article_no, 'category', r.category, 'title', r.title, " +
+    "'summary', r.summary, 'conditions', json(r.conditions), 'rule_version', r.rule_version, " +
+    "'effective_date', r.effective_date, 'status', r.status, 'updated_by', r.updated_by, 'updated_at', r.updated_at), ?3 " +
+    "FROM rules r WHERE r.id = " + ruleIdSql
+  ).bind(...binds);
+}
+
+// 寫入（同一個 batch＝同一個交易）；撞到 UNIQUE(rule_id, revision) 就重試
+async function runRuleBatch(env, makeStmts) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await env.DB.batch(makeStmts());
+    } catch (e) {
+      if (attempt < 2 && /UNIQUE/i.test(String(e && e.message))) continue;
+      throw e;
+    }
+  }
+  throw new Error("法規條文儲存失敗");
+}
+
+// GET /api/rules?q=&category=&status=
+// staff：只看 published（帶其他 status 回 403）。admin：status 可為 published（預設）、draft、disabled、all。
+async function listRules(user, env, url) {
+  const sp = url.searchParams;
+  const q = (sp.get("q") || "").trim();
+  const category = (sp.get("category") || "").trim();
+  const status = (sp.get("status") || "published").trim();
+
+  if (q.length > RULE_QUERY_MAX) return error(400, "關鍵字最多 " + RULE_QUERY_MAX + " 個字。");
+  if (category && !RULE_CATEGORIES.includes(category)) return error(400, "分類不正確。");
+  if (status !== "all" && !RULE_STATUSES.includes(status)) return error(400, "狀態不正確。");
+  if (status !== "published" && !isAdmin(user)) return error(403, "只有管理者可以看草稿或已停用的條文。");
+
+  const where = [];
+  const binds = [];
+  if (status !== "all") { binds.push(status); where.push("r.status = ?" + binds.length); }
+  if (category) { binds.push(category); where.push("r.category = ?" + binds.length); }
+  if (q) {
+    // LIKE 的萬用字元 % _ 和跳脫字元 \ 都先跳脫，使用者打的字一律當成一般文字
+    binds.push("%" + q.replace(/[\\%_]/g, ch => "\\" + ch) + "%");
+    const n = "?" + binds.length;
+    where.push(`(r.article_no LIKE ${n} ESCAPE '\\' OR r.title LIKE ${n} ESCAPE '\\' OR r.summary LIKE ${n} ESCAPE '\\')`);
+  }
+  const sql = `SELECT ${RULE_COLS} ${RULE_FROM} ${where.length ? "WHERE " + where.join(" AND ") : ""} ${RULE_ORDER} LIMIT 500`;
+  const { results } = await env.DB.prepare(sql).bind(...binds).all();
+  return json({ rules: (results || []).map(ruleRow) });
+}
+
+// GET /api/rules/:id：staff 只能看 published（其他回 404，不透露有草稿）
+async function getRule(user, env, id) {
+  const rule = await loadRule(env, id);
+  if (!rule || (rule.status !== "published" && !isAdmin(user))) return error(404, "找不到這筆條文。");
+  return json({ rule });
+}
+
+// POST /api/rules  body: { data: {...} }：一律存成草稿（admin）
+async function createRule(request, user, env) {
+  const rb = await readJsonBody(request);
+  if (rb.response) return rb.response;
+  const { data, errors } = validateRule(rb.body.data);
+  if (Object.keys(errors).length) return validationError(errors);
+
+  const results = await runRuleBatch(env, () => [
+    env.DB.prepare(
+      "INSERT INTO rules (article_no, category, title, summary, conditions, rule_version, effective_date, status, updated_by, updated_at) " +
+      "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'draft', ?8, datetime('now')) RETURNING id"
+    ).bind(data.article_no, data.category, data.title, data.summary, JSON.stringify(data.conditions),
+           data.rule_version, data.effective_date, user.email),
+    // 這一句和上一句在同一個交易裡，last_insert_rowid() 就是剛新增的條文 id
+    // （?1 綁 null，所以 COALESCE 會用 last_insert_rowid()）
+    revisionStmt(env, "COALESCE(?1, (SELECT last_insert_rowid()))", [null, "create", user.email]),
+    // 這時 last_insert_rowid() 是剛新增的修改紀錄 id
+    env.DB.prepare(
+      "INSERT INTO audit_log (actor_email, action, detail) " +
+      "SELECT ?1, 'rule_create', '法規條文 #' || rule_id || ' 新增（草稿，修改紀錄 #' || revision || '）' " +
+      "FROM rule_revisions WHERE id = (SELECT last_insert_rowid())"
+    ).bind(user.email),
+  ]);
+  const row = results[0] && results[0].results && results[0].results[0];
+  const rule = row ? await loadRule(env, row.id) : null;
+  return json({ rule }, 201);
+}
+
+function ruleLabel(rule) {
+  return "法規條文 #" + rule.id + (rule.article_no ? "（" + rule.article_no + "）" : "");
+}
+
+// 更新條文欄位或狀態，並在同一個交易裡新增修改紀錄與 audit_log
+async function writeRuleChange(env, user, id, updateStmt, action, detail) {
+  await runRuleBatch(env, () => [
+    updateStmt(),
+    revisionStmt(env, "?1", [id, action, user.email]),
+    env.DB.prepare("INSERT INTO audit_log (actor_email, action, detail) VALUES (?1, ?2, ?3)")
+      .bind(user.email, "rule_" + action, detail),
+  ]);
+  return loadRule(env, id);
+}
+
+// PUT /api/rules/:id  body: { data: {...} }：編輯內容，狀態保持不變（admin）
+// 已發佈的條文編輯後仍是已發佈，所以三項必要資訊不能被清空。
+async function updateRule(request, user, env, id) {
+  const rb = await readJsonBody(request);
+  if (rb.response) return rb.response;
+  const old = await loadRule(env, id);
+  if (!old) return error(404, "找不到這筆條文。");
+
+  const { data, errors } = validateRule(rb.body.data);
+  if (old.status === "published" && !errors._form) {
+    const miss = rulePublishMissing(data);
+    for (const k of Object.keys(miss)) if (!errors[k]) errors[k] = "已發佈的條文不能清空這一項。";
+  }
+  if (Object.keys(errors).length) return validationError(errors);
+
+  const rule = await writeRuleChange(env, user, id, () => env.DB.prepare(
+    "UPDATE rules SET article_no = ?2, category = ?3, title = ?4, summary = ?5, conditions = ?6, " +
+    "rule_version = ?7, effective_date = ?8, updated_by = ?9, updated_at = datetime('now') WHERE id = ?1"
+  ).bind(id, data.article_no, data.category, data.title, data.summary, JSON.stringify(data.conditions),
+         data.rule_version, data.effective_date, user.email),
+  "update", ruleLabel({ id, article_no: data.article_no }) + " 編輯");
+  return json({ rule });
+}
+
+// POST /api/rules/:id/publish：條文編號、規則版本、生效日期缺任何一項就回 400（驗收 4.2 第二條）
+async function publishRule(request, user, env, id) {
+  const rb = await readJsonBody(request);   // 內容不用，但仍要求 JSON（防跨站送出）
+  if (rb.response) return rb.response;
+  const old = await loadRule(env, id);
+  if (!old) return error(404, "找不到這筆條文。");
+  if (old.status === "published") return error(409, "這筆條文已經是發佈狀態。");
+  const miss = rulePublishMissing(old);
+  if (Object.keys(miss).length) {
+    return json({ error: "條文編號、規則版本、生效日期都要填才能發佈。", fields: miss }, 400);
+  }
+  const rule = await writeRuleChange(env, user, id, () => env.DB.prepare(
+    "UPDATE rules SET status = 'published', updated_by = ?2, updated_at = datetime('now') WHERE id = ?1"
+  ).bind(id, user.email), "publish", ruleLabel(old) + " 發佈");
+  return json({ rule });
+}
+
+// POST /api/rules/:id/disable：停用（不刪除；之後可再發佈）
+async function disableRule(request, user, env, id) {
+  const rb = await readJsonBody(request);
+  if (rb.response) return rb.response;
+  const old = await loadRule(env, id);
+  if (!old) return error(404, "找不到這筆條文。");
+  if (old.status === "disabled") return error(409, "這筆條文已經是停用狀態。");
+  const rule = await writeRuleChange(env, user, id, () => env.DB.prepare(
+    "UPDATE rules SET status = 'disabled', updated_by = ?2, updated_at = datetime('now') WHERE id = ?1"
+  ).bind(id, user.email), "disable", ruleLabel(old) + " 停用");
+  return json({ rule });
+}
+
+// GET /api/rules/:id/revisions：修改紀錄（新到舊），含修改人、時間、動作、完整快照（admin）
+async function listRuleRevisions(env, id) {
+  const exists = await env.DB.prepare("SELECT 1 AS ok FROM rules WHERE id = ?1").bind(id).first();
+  if (!exists) return error(404, "找不到這筆條文。");
+  const { results } = await env.DB
+    .prepare(`SELECT v.revision, v.action, v.snapshot, v.changed_by, u.name AS changed_by_name, v.changed_at
+              FROM rule_revisions v LEFT JOIN users u ON u.email = v.changed_by
+              WHERE v.rule_id = ?1 ORDER BY v.revision DESC`)
+    .bind(id)
+    .all();
+  return json({
+    revisions: (results || []).map(r => ({
+      revision: r.revision,
+      action: r.action,
+      snapshot: parseJsonColumn(r.snapshot),
+      changed_by: r.changed_by,
+      changed_by_name: r.changed_by_name || null,
+      changed_at: r.changed_at,
+    })),
+  });
+}
+
+// GET /api/projects/:id/rule-match（staff／admin，已過 loadProject）
+// 取最新規格書版本；還沒有規格書就用需求暫存（並標示來源）。只對照 published 條文。
+async function ruleMatch(env, project) {
+  let source;
+  let data = {};
+  const spec = await env.DB
+    .prepare("SELECT version, data, created_at FROM spec_versions WHERE project_id = ?1 ORDER BY version DESC LIMIT 1")
+    .bind(project.id)
+    .first();
+  if (spec) {
+    source = { type: "spec", version: spec.version, at: spec.created_at };
+    data = parseJsonColumn(spec.data);
+  } else {
+    const draft = await env.DB
+      .prepare("SELECT data, updated_at FROM requirement_drafts WHERE project_id = ?1")
+      .bind(project.id)
+      .first();
+    if (draft) {
+      source = { type: "draft", version: null, at: draft.updated_at };
+      data = parseJsonColumn(draft.data);
+    } else {
+      source = { type: "none", version: null, at: null };
+    }
+  }
+  const params = matchParamsFrom(data);
+  const { results } = await env.DB
+    .prepare(`SELECT ${RULE_COLS} ${RULE_FROM} WHERE r.status = 'published' ${RULE_ORDER}`)
+    .all();
+  const rules = (results || []).map(ruleRow);
+  const { matched, needsConfirm } = matchRules(params, rules);
+  return json({
+    project: { id: project.id, name: project.name },
+    source,
+    params,
+    checked: rules.length,
+    matched,
+    needs_confirm: needsConfirm,
+  });
+}
+
+// /api/rules 底下的路由（已登入）
+async function handleRules(request, user, env, url, path, method) {
+  let id = null;
+  let sub = "";
+  if (path !== "/api/rules") {
+    const m = path.match(/^\/api\/rules\/(\d{1,12})(\/publish|\/disable|\/revisions)?$/);
+    if (!m) return error(404, "沒有這支 API。");
+    id = Number(m[1]);
+    sub = m[2] || "";
+  }
+
+  // 客戶一律不能碰法規資料（SDD 4.4：客戶進不了法規維護頁，後端一定要擋）
+  if (!isStaffOrAdmin(user)) return error(403, "只有船廠人員可以使用法規資料。");
+
+  let allowed;
+  if (id === null) allowed = ["GET", "POST"];
+  else if (sub === "") allowed = ["GET", "PUT"];
+  else if (sub === "/revisions") allowed = ["GET"];
+  else allowed = ["POST"];
+  if (!allowed.includes(method)) return methodNotAllowed();
+
+  // 維護（新增、編輯、發佈、停用、修改紀錄）只限管理者
+  const adminOnly = method !== "GET" || sub === "/revisions";
+  if (adminOnly && !isAdmin(user)) return error(403, "只有管理者可以維護法規資料。");
+
+  if (id === null) return method === "GET" ? listRules(user, env, url) : createRule(request, user, env);
+  if (sub === "") return method === "GET" ? getRule(user, env, id) : updateRule(request, user, env, id);
+  if (sub === "/publish") return publishRule(request, user, env, id);
+  if (sub === "/disable") return disableRule(request, user, env, id);
+  return listRuleRevisions(env, id);
+}
 
 const ALLOWED_METHODS = ["GET", "PUT", "POST"];
 
@@ -751,15 +1216,22 @@ async function handleApi(request, env, url) {
   if (path === "/api/me") return method === "GET" ? getMe(user) : methodNotAllowed();
   if (path === "/api/projects") return method === "GET" ? listProjects(user, env) : methodNotAllowed();
 
+  if (path === "/api/rules" || path.startsWith("/api/rules/")) {
+    return handleRules(request, user, env, url, path, method);
+  }
+
   const m = path.match(/^\/api\/projects\/(\d{1,12})(\/.*)?$/);
   if (!m) return error(404, "沒有這支 API。");
 
   const sub = m[2] || "";
   const known =
     sub === "" || sub === "/requirements" || sub === "/spec" || sub === "/spec/generate" ||
-    sub === "/spec/versions" || sub === "/comments" ||
+    sub === "/spec/versions" || sub === "/comments" || sub === "/rule-match" ||
     /^\/spec\/versions\/\d{1,9}$/.test(sub) || /^\/spec\/restore\/\d{1,9}$/.test(sub);
   if (!known) return error(404, "沒有這支 API。");
+
+  // 法規對照只限船廠人員與管理者（先擋角色，再查專案）
+  if (sub === "/rule-match" && !isStaffOrAdmin(user)) return error(403, "只有船廠人員可以使用法規對照。");
 
   // 每支專案 API 都先檢查專案存取權（客戶只能碰自己的專案）
   const lp = await loadProject(user, env, Number(m[1]));
@@ -767,6 +1239,8 @@ async function handleApi(request, env, url) {
   const project = lp.project;
 
   if (sub === "") return method === "GET" ? getProject(project) : methodNotAllowed();
+
+  if (sub === "/rule-match") return method === "GET" ? ruleMatch(env, project) : methodNotAllowed();
 
   if (sub === "/requirements") {
     if (method === "GET") return getRequirements(env, project);
